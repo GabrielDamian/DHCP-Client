@@ -17,3 +17,18 @@ if __name__ == "__main__":
         sock.sendto(b"Hello",('<broadcast>',PORT))
         print("Trimis Hello")
         time.sleep(5)
+        
+        
+        
+ #Todos:
+ #Functie care trimite DHCP DISCOVER
+ #Socket pentru primirea ofertei de la server (sau servere) //DHCP OFFER
+ #Functie pentru DHCPREQUEST catre serverul selectat
+ #Socket care primeste DHCPACK pentru inchirierea datelor
+ #Functie care ruleaza periodic pentru reinnoirea contractului
+ #Functie pentru deconectare de la server
+ 
+ 
+ #Structura mesaje in fisier separat (urmand sa fie utilizate atat de client cat si de server)
+ 
+ 

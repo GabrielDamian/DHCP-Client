@@ -13,6 +13,14 @@ if __name__ == "__main__":
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     listener.bind(addr)
 
+    print("Server is listening")
     while True:
         data = listener.recv(100)
         print(data)
+        
+        
+        
+#Todos:
+#Broadcast care asculta pentru DHCP DISCOVER => Alege daca face sau nu o oferta in functie de resursele pe care le are disponibile
+#Socket pentru DHCPREQUEST 
+#Socket pentru DHCPACK 
