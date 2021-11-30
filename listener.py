@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
     print("Server is listening")
     while True:
-        data = listener.recv(100)
+        data = listener.recv(1000)
         print(data)
         
         
