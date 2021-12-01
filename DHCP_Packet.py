@@ -2,21 +2,22 @@ import socket
 from enum import IntEnum
 from random import randrange
 
+
 class DataToBytes:
     @staticmethod
-    def ipToBytes(data: str):
+    def ipToBytes(data: str) -> bytes:
         return socket.inet_aton(data) #length 4 octeti
 
     @staticmethod
-    def hexToBytes(data, length: int = 4):
+    def hexToBytes(data, length: int = 4) -> bytes:
         return data.to_bytes(length, 'big')
 
     @staticmethod
-    def intToBytes(data: int, length: int = 1):
+    def intToBytes(data: int, length: int = 1) -> bytes:
         return data.to_bytes(length, 'big')
 
     @staticmethod
-    def macToBytes(data: str, length: int = 6):
+    def macToBytes(data: str, length: int = 6) -> bytes:
         vec = [bytes.fromhex(x).lower() for x in data.split(":")]
         final = b''
         for e in vec:
@@ -24,29 +25,29 @@ class DataToBytes:
         return final + (length - final.__len__()) * b'\x00'
 
     @staticmethod
-    def strToBytes(data: str, length: int):
+    def strToBytes(data: str, length: int) -> bytes :
         final = str.encode(data)
         return final + (length - len(final)) * b'\x00'
 
 
 class BytesToData:
     @staticmethod
-    def bytesToIp(data: bytes):
+    def bytesToIp(data: bytes) -> str:
         arr = [int(x) for x in data]
         ip = '.'.join(str(x) for x in arr)
         return str(ip)
 
     @staticmethod
-    def bytesToHex(data: bytes):
+    def bytesToHex(data: bytes) -> int:
         return int.from_bytes(data, byteorder='big', signed=False)
 
     @staticmethod
-    def bytesToStr(data: bytes):
+    def bytesToStr(data: bytes) -> str:
         final = data.decode("utf-8")
         return final.replace('\0', '')
 
     @staticmethod
-    def bytesToInt(data: bytes):
+    def bytesToInt(data: bytes) -> int:
         return int.from_bytes(data, byteorder='big', signed=False)
 
     @staticmethod
@@ -63,25 +64,57 @@ class Opcodes(IntEnum):
     REPLY = 2
 
 
+class Optiuni_request(IntEnum):
+    SUBNET_MASK = 1
+    ROUTER = 3
+    DOMAIN_SERVER = 6
+    BROADCAST_ADRESS = 28
+    LEASE_TIME = 51
+    RENEWAL_TIME = 58
+
+
+class Optiuni(IntEnum):
+    PAD = 0
+    HOST_NAME = 12
+    ADDRESS_REQUEST = 50
+    DHCP_MESSAGE_TYPE = 53
+    CLIENT_ID = 61
+    END = 255
+
+
 class Packet:
-    def __init__(self, packet=None):
+    def __init__(self, packet=None, requested_options: list=()):
         self.opcode = Opcodes(BytesToData.bytesToInt(packet[0:1])) if packet else Opcodes.NONE
         self.hardware_type = BytesToData.bytesToInt(packet[1:2]) if packet else 1  #1 - Ethernet
         self.hardware_address_length = BytesToData.bytesToInt(packet[2:3]) if packet else 6
         self.hops = BytesToData.bytesToInt(packet[3:4]) if packet else 0 #noduri intermediare prin care a trecut mesajul
-        self.transaction_id = BytesToData.bytesToHex(packet[4:8]) if packet else randrange(0x100000000) #token random de identificare mesaj propriu
+        self.transaction_id = BytesToData.bytesToHex(packet[4:8]) if packet else randrange(0x100000) #token random de identificare mesaj propriu
         self.seconds_elapsed = BytesToData.bytesToInt(packet[8:10]) if packet else 0 #number of seconds elapsed since a client began an attempt to acquire or renew a lease
         self.boot_flags = BytesToData.bytesToHex(packet[10:12]) if packet else 0x0
         self.client_ip_address = BytesToData.bytesToIp(packet[12:16]) if packet else '0.0.0.0'
-        self.your_ip_address =  BytesToData.bytesToIp(packet[16:20]) if packet else '0.0.0.0'
+        self.your_ip_address = BytesToData.bytesToIp(packet[16:20]) if packet else '0.0.0.0'
         self.server_ip_address = BytesToData.bytesToIp(packet[20:24]) if packet else '0.0.0.0'
         self.gateway_ip_address = BytesToData.bytesToIp(packet[24:28]) if packet else '0.0.0.0'
-        self.client_hardware_address =  BytesToData.bytesToMac(packet[28:34]) if packet else '1A:2B:3C:3C:C4:EF'
+        self.client_hardware_address = BytesToData.bytesToMac(packet[28:34]) if packet else '1A:2B:3C:3C:C4:EF'
         self.server_name = BytesToData.bytesToStr(packet[44:108]) if packet else ''
         self.boot_filename = BytesToData.bytesToStr(packet[108:236]) if packet else ''
         self.magic_cookie = BytesToData.bytesToStr(packet[236:240]) if packet else int.from_bytes(b'\x63\x82\x53\x63', byteorder='big') #standard value: 99.130.83.99
+        #OPTIUNI
 
-    def pregateste_packetul(self):
+        self.host_name = None
+        self.address_request = None
+        self.dhcp_message_type = None
+        self.client_id = None
+
+        #requested parameters
+        self.op55 = None
+        if len(requested_options) > 0:
+            self.op55 = DataToBytes.intToBytes(55, 1)
+            self.op55 += DataToBytes.intToBytes(len(requested_options))
+            for option in requested_options:
+                self.op55 += DataToBytes.intToBytes(option.value)
+
+    def pregateste_packetul(self) -> bytes:
         packet_pregatit = b''
         packet_pregatit += DataToBytes.intToBytes(self.opcode)
         packet_pregatit += DataToBytes.intToBytes(self.hardware_type)
@@ -99,6 +132,20 @@ class Packet:
         packet_pregatit += DataToBytes.strToBytes(self.boot_filename, 128)
         packet_pregatit += DataToBytes.hexToBytes(self.magic_cookie, 4)
         #OPTIUNI
+        if self.op55: packet_pregatit += self.op55
+        if self.host_name:
+            packet_pregatit += DataToBytes.intToBytes(Optiuni.HOST_NAME.value) + DataToBytes.intToBytes(len(self.host_name))\
+                               + DataToBytes.strToBytes(self.host_name,len(self.host_name))
+        if self.address_request:
+            packet_pregatit += DataToBytes.intToBytes(Optiuni.ADDRESS_REQUEST.value) + DataToBytes.intToBytes(4)\
+                               + DataToBytes.ipToBytes(self.address_request)
+        if self.dhcp_message_type:
+            packet_pregatit += DataToBytes.intToBytes(Optiuni.DHCP_MESSAGE_TYPE.value) + DataToBytes.intToBytes(1)\
+                               + DataToBytes.intToBytes(self.dhcp_message_type)
+        if self.client_id:
+            packet_pregatit += DataToBytes.intToBytes(Optiuni.CLIENT_ID.value) + DataToBytes.intToBytes(len(self.client_id)) \
+                               + DataToBytes.strToBytes(self.client_id, len(self.client_id))
+
         return packet_pregatit
 
     def __str__(self):

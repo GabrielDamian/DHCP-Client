@@ -1,7 +1,7 @@
 import socket
 import threading
 import time
-from DHCP_Packet import Packet
+from DHCP_Packet import Packet,Optiuni,Optiuni_request,BytesToData
 
 PORT = 8080
 ADRESS = ""
@@ -21,9 +21,10 @@ if __name__ == "__main__":
     sock = init_socket()
 
     #construire packet dhcprequest
-    packet = Packet()
+    packet = Packet(requested_options=[Optiuni_request.SUBNET_MASK, Optiuni_request.DOMAIN_SERVER])
+    packet.host_name = "salut"
     packet_bytes = packet.pregateste_packetul()
-    print(packet_bytes)
+
 
     #trimitere DHCPRequest
     sock.sendto(packet_bytes, ADDR)
