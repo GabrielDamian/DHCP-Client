@@ -1,7 +1,4 @@
 import socket
-import select
-import threading
-from sys import getsizeof
 
 server = ''
 port = 8080

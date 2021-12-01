@@ -1,8 +1,6 @@
 import socket
 from enum import IntEnum
 from random import randrange
-from struct import pack
-
 
 class DataToBytes:
     @staticmethod
@@ -19,7 +17,10 @@ class DataToBytes:
 
     @staticmethod
     def macToBytes(data: str, length: int = 6):
-        final = bytes.fromhex(data.replace(':', '').lower())
+        vec = [bytes.fromhex(x).lower() for x in data.split(":")]
+        final = b''
+        for e in vec:
+            final += e
         return final + (length - final.__len__()) * b'\x00'
 
     @staticmethod
@@ -48,10 +49,12 @@ class BytesToData:
     def bytesToInt(data: bytes):
         return int.from_bytes(data, byteorder='big', signed=False)
 
-    #TO DO: MAC
     @staticmethod
-    def bytesToMac(data: bytes):
-        pass
+    def bytesToMac(data: bytes) -> str:
+        rez = ''
+        for x in data:
+            rez += str(hex(x)[2:]) + ":"
+        return rez[:-1]
 
 
 class Opcodes(IntEnum):
@@ -95,6 +98,7 @@ class Packet:
         packet_pregatit += DataToBytes.strToBytes(self.server_name, 64)
         packet_pregatit += DataToBytes.strToBytes(self.boot_filename, 128)
         packet_pregatit += DataToBytes.hexToBytes(self.magic_cookie, 4)
+        #OPTIUNI
         return packet_pregatit
 
     def __str__(self):
@@ -116,4 +120,5 @@ class Packet:
         """
         return msg
 
+# OPTIUNI, DESPACHETARE
 
