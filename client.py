@@ -1,8 +1,7 @@
 import socket
 import threading
 import time
-from DHCP_Packet import Packet,Optiuni,Optiuni_request,BytesToData
-
+from DHCP_Packet import *
 PORT = 8080
 ADRESS = ""
 ADDR = ('<broadcast>', PORT)
@@ -18,34 +17,33 @@ def init_socket() -> socket.socket:
 
 
 if __name__ == "__main__":
+
     sock = init_socket()
 
-    #construire packet dhcprequest
+
+    #construire packet DHCP Discover
     packet = Packet(requested_options=[Optiuni_request.SUBNET_MASK, Optiuni_request.DOMAIN_SERVER])
+    packet.opcode = Opcodes.REQUEST
     packet.host_name = "salut"
+    packet.dhcp_message_type = Tip_Mesaj.DISCOVER
 
     packet_bytes = packet.pregateste_packetul()
-    print("verificare:",packet_bytes[240])
 
-    #trimitere DHCPRequest
+    #trimitere DISCOVER
     sock.sendto(packet_bytes, ADDR)
 
-    # while True:
-    #     sock.sendto(b"Hello",('<broadcast>',PORT))
-    #     print("Trimis Hello")
-    #     time.sleep(5)
-        
-        
-        
- #Todos:
- #Functie care trimite DHCP DISCOVER
- #Socket pentru primirea ofertei de la server (sau servere) //DHCP OFFER
- #Functie pentru DHCPREQUEST catre serverul selectat
- #Socket care primeste DHCPACK pentru inchirierea datelor
- #Functie care ruleaza periodic pentru reinnoirea contractului
- #Functie pentru deconectare de la server
- 
- 
- #Structura mesaje in fisier separat (urmand sa fie utilizate atat de client cat si de server)
- 
+    mesaj_server = sock.recv(1000)
+    packet_2 = Packet(mesaj_server)
+
+    if packet_2.dhcp_message_type == Tip_Mesaj.OFFER:
+        packet_2.opcode = Opcodes.REQUEST
+        packet_2.dhcp_message_type = Tip_Mesaj.REQUEST
+        sock.sendto(packet_2.pregateste_packetul(), ADDR)
+
+    mesaj_ack = sock.recv(1000)
+    packet_ack = Packet(mesaj_ack)
+    if packet_ack.dhcp_message_type == Tip_Mesaj.ACK:
+        print(packet_ack)
+
+
  

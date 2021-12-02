@@ -63,6 +63,14 @@ class Opcodes(IntEnum):
     REQUEST = 1
     REPLY = 2
 
+class Tip_Mesaj(IntEnum):
+    NONE = 0
+    DISCOVER = 1
+    OFFER = 2
+    REQUEST = 3
+    DECLINE = 4
+    ACK = 5
+
 
 class Optiuni_request(IntEnum):
     SUBNET_MASK = 1
