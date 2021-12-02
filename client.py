@@ -23,8 +23,9 @@ if __name__ == "__main__":
     #construire packet dhcprequest
     packet = Packet(requested_options=[Optiuni_request.SUBNET_MASK, Optiuni_request.DOMAIN_SERVER])
     packet.host_name = "salut"
-    packet_bytes = packet.pregateste_packetul()
 
+    packet_bytes = packet.pregateste_packetul()
+    print("verificare:",packet_bytes[240])
 
     #trimitere DHCPRequest
     sock.sendto(packet_bytes, ADDR)

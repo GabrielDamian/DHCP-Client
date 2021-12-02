@@ -1,5 +1,5 @@
 import socket
-
+from DHCP_Packet import *
 server = ''
 port = 8080
 addr = (server, port)
@@ -13,8 +13,10 @@ if __name__ == "__main__":
     print("Server is listening")
     while True:
         data = listener.recv(1000)
-        print(data)
-        
+        packet = Packet()
+
+        packet.set_optiuni_from_bytes(data[240:])
+        print(packet)
         
         
 #Todos:

@@ -96,7 +96,7 @@ class Packet:
         self.server_ip_address = BytesToData.bytesToIp(packet[20:24]) if packet else '0.0.0.0'
         self.gateway_ip_address = BytesToData.bytesToIp(packet[24:28]) if packet else '0.0.0.0'
         self.client_hardware_address = BytesToData.bytesToMac(packet[28:34]) if packet else '1A:2B:3C:3C:C4:EF'
-        self.server_name = BytesToData.bytesToStr(packet[44:108]) if packet else ''
+        self.server_name = BytesToData.bytesToStr(packet[34:108]) if packet else ''
         self.boot_filename = BytesToData.bytesToStr(packet[108:236]) if packet else ''
         self.magic_cookie = BytesToData.bytesToStr(packet[236:240]) if packet else int.from_bytes(b'\x63\x82\x53\x63', byteorder='big') #standard value: 99.130.83.99
         #OPTIUNI
@@ -108,11 +108,65 @@ class Packet:
 
         #requested parameters
         self.op55 = None
+
+        self.suprascrie_optiuni_55(requested_options)
+
+        # initializare cu un packet
+        if packet:
+            self.set_optiuni_from_bytes(packet[240:])
+
+    def suprascrie_optiuni_55(self,requested_options):
         if len(requested_options) > 0:
             self.op55 = DataToBytes.intToBytes(55, 1)
             self.op55 += DataToBytes.intToBytes(len(requested_options))
             for option in requested_options:
                 self.op55 += DataToBytes.intToBytes(option.value)
+
+    def set_optiuni_from_bytes(self,packet:bytes):
+        index = 0
+        optiunu_dic ={}
+        while index < len(packet) - 1:
+            op_code = packet[index]
+            op_size = packet[index + 1]
+            op = packet[index + 2:index + 2 + op_size]
+            op_55_arr = []
+            if op_code == 55:
+                for x in op:
+                    op_55_arr.append(x)
+
+            if op_code == 55:
+                optiunu_dic[55] =op_55_arr
+            else:
+                optiunu_dic[op_code] =op
+
+            index += 1 + 1 + op_size
+        print(optiunu_dic)
+
+        for x in optiunu_dic:
+            if x ==55:
+                pass
+            if x ==1:
+                print(BytesToData.bytesToIp(optiunu_dic[x]))
+            if x == 3:
+                print(BytesToData.bytesToIp(optiunu_dic[x]))
+            if x == 6:
+                print(optiunu_dic[x])
+            if x == 28:
+                print(optiunu_dic[x])
+            if x == 51:
+                print(optiunu_dic[x])
+            if x == 58:
+                print(optiunu_dic[x])
+            if x == 0:
+                print(optiunu_dic[x])
+            if x == 12:
+                self.host_name = BytesToData.bytesToStr(optiunu_dic[x])
+            if x == 50:
+                self.address_request = BytesToData.bytesToIp(optiunu_dic[x])
+            if x == 53:
+                self.dhcp_message_type = BytesToData.bytesToInt(optiunu_dic[x])
+            if x == 61:
+                self.client_id = BytesToData.bytesToStr(optiunu_dic[x])
 
     def pregateste_packetul(self) -> bytes:
         packet_pregatit = b''
@@ -121,13 +175,13 @@ class Packet:
         packet_pregatit += DataToBytes.intToBytes(self.hardware_address_length)
         packet_pregatit += DataToBytes.intToBytes(self.hops)
         packet_pregatit += DataToBytes.hexToBytes(self.transaction_id)
-        packet_pregatit += DataToBytes.intToBytes(self.seconds_elapsed)
+        packet_pregatit += DataToBytes.intToBytes(self.seconds_elapsed,2)
         packet_pregatit += DataToBytes.hexToBytes(self.boot_flags, 2)
         packet_pregatit += DataToBytes.ipToBytes(self.client_ip_address)
         packet_pregatit += DataToBytes.ipToBytes(self.your_ip_address)
         packet_pregatit += DataToBytes.ipToBytes(self.server_ip_address)
         packet_pregatit += DataToBytes.ipToBytes(self.gateway_ip_address)
-        packet_pregatit += DataToBytes.macToBytes(self.client_hardware_address)
+        packet_pregatit += DataToBytes.macToBytes(self.client_hardware_address,16)
         packet_pregatit += DataToBytes.strToBytes(self.server_name, 64)
         packet_pregatit += DataToBytes.strToBytes(self.boot_filename, 128)
         packet_pregatit += DataToBytes.hexToBytes(self.magic_cookie, 4)
@@ -145,6 +199,7 @@ class Packet:
         if self.client_id:
             packet_pregatit += DataToBytes.intToBytes(Optiuni.CLIENT_ID.value) + DataToBytes.intToBytes(len(self.client_id)) \
                                + DataToBytes.strToBytes(self.client_id, len(self.client_id))
+        packet_pregatit += DataToBytes.intToBytes(255, 1)
 
         return packet_pregatit
 
@@ -164,8 +219,12 @@ class Packet:
         client_hardware_address: {self.client_hardware_address}\n
         server_name: {self.server_name}\n
         boot_filename: {self.boot_filename}\n
+        OPTIUNI:\n
+        host_name: {self.host_name}\n
+        address_request: {self.address_request}\n
+        dhcp_message_type: {self.dhcp_message_type}\n
+        client: {self.client_id}\n
         """
         return msg
 
 # OPTIUNI, DESPACHETARE
-
