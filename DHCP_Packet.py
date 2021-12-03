@@ -98,7 +98,7 @@ class Packet:
         self.hops = BytesToData.bytesToInt(packet[3:4]) if packet else 0 #noduri intermediare prin care a trecut mesajul
         self.transaction_id = BytesToData.bytesToHex(packet[4:8]) if packet else randrange(0x100000) #token random de identificare mesaj propriu
         self.seconds_elapsed = BytesToData.bytesToInt(packet[8:10]) if packet else 0 #number of seconds elapsed since a client began an attempt to acquire or renew a lease
-        self.boot_flags = BytesToData.bytesToHex(packet[10:12]) if packet else 0x0
+        self.boot_flags = BytesToData.bytesToInt(packet[10:12]) if packet else 0
         self.client_ip_address = BytesToData.bytesToIp(packet[12:16]) if packet else '0.0.0.0'
         self.your_ip_address = BytesToData.bytesToIp(packet[16:20]) if packet else '0.0.0.0'
         self.server_ip_address = BytesToData.bytesToIp(packet[20:24]) if packet else '0.0.0.0'
@@ -130,7 +130,7 @@ class Packet:
             for option in requested_options:
                 self.op55 += DataToBytes.intToBytes(option.value)
 
-    def set_optiuni_from_bytes(self,packet:bytes):
+    def set_optiuni_from_bytes(self, packet: bytes):
         index = 0
         optiunu_dic ={}
         while index < len(packet) - 1:
@@ -151,7 +151,7 @@ class Packet:
         print(optiunu_dic)
 
         for x in optiunu_dic:
-            if x ==55:
+            if x == 55:
                 pass
             if x ==1:
                 print(BytesToData.bytesToIp(optiunu_dic[x]))
@@ -184,7 +184,7 @@ class Packet:
         packet_pregatit += DataToBytes.intToBytes(self.hops)
         packet_pregatit += DataToBytes.hexToBytes(self.transaction_id)
         packet_pregatit += DataToBytes.intToBytes(self.seconds_elapsed,2)
-        packet_pregatit += DataToBytes.hexToBytes(self.boot_flags, 2)
+        packet_pregatit += DataToBytes.intToBytes(self.boot_flags, 2)
         packet_pregatit += DataToBytes.ipToBytes(self.client_ip_address)
         packet_pregatit += DataToBytes.ipToBytes(self.your_ip_address)
         packet_pregatit += DataToBytes.ipToBytes(self.server_ip_address)
