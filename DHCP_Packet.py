@@ -63,6 +63,7 @@ class Opcodes(IntEnum):
     REQUEST = 1
     REPLY = 2
 
+
 class Tip_Mesaj(IntEnum):
     NONE = 0
     DISCOVER = 1

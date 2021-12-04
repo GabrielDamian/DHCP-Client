@@ -1,14 +1,13 @@
 from DHCP_Packet import *
 
-server = ''
-port = 67
-addr = (server, port)
-BROADCAST_ADDR = ('<broadcast>',68)
+BIND_ADDRESS = ('', 67)
+BROADCAST_ADDR = ('<broadcast>', 68)
+
 if __name__ == "__main__":
     listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    listener.bind(addr)
+    listener.bind(BIND_ADDRESS)
 
     print("Server is listening")
     # asteptare dicover

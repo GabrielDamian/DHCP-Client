@@ -1,11 +1,8 @@
 from DHCP_Packet import *
 from select import select
 
-SOURCE_PORT = 68
-DESTINATION_PORT = 67
-SOURCE_ADDR = ("", SOURCE_PORT)
-DESTINATIN_ADDR = ('<broadcast>', DESTINATION_PORT)
-
+SOURCE_ADDR = ("", 68)
+DESTINATIN_ADDR = ('<broadcast>', 67)
 
 if __name__ == "__main__":
 
