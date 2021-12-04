@@ -108,14 +108,23 @@ class Packet:
         self.server_name = BytesToData.bytesToStr(packet[34:108]) if packet else ''
         self.boot_filename = BytesToData.bytesToStr(packet[108:236]) if packet else ''
         self.magic_cookie = BytesToData.bytesToHex(packet[236:240]) if packet else int.from_bytes(b'\x63\x82\x53\x63', byteorder='big') #standard value: 99.130.83.99
-        #OPTIUNI
+        # OPTIUNI
 
+        # optiuni client
         self.host_name = None
         self.address_request = None
         self.dhcp_message_type = None
         self.client_id = None
 
-        #requested parameters
+        # optiuni server
+        self.subnet_mask = None
+        self.router = None
+        self.domain_server = None
+        self.broadcast_address = None
+        self.lease_time = None
+        self.renewal_time = None
+
+        # requested parameters
         self.op55 = None
 
         self.suprascrie_optiuni_55(requested_options)
@@ -133,7 +142,7 @@ class Packet:
 
     def set_optiuni_from_bytes(self, packet: bytes):
         index = 0
-        optiunu_dic ={}
+        optiunu_dic = {}
         while index < len(packet) - 1:
             op_code = packet[index]
             op_size = packet[index + 1]
@@ -144,30 +153,29 @@ class Packet:
                     op_55_arr.append(x)
 
             if op_code == 55:
-                optiunu_dic[55] =op_55_arr
+                optiunu_dic[55] = op_55_arr
             else:
-                optiunu_dic[op_code] =op
+                optiunu_dic[op_code] = op
 
             index += 1 + 1 + op_size
-        print(optiunu_dic)
 
         for x in optiunu_dic:
             if x == 55:
                 pass
-            if x ==1:
-                print(BytesToData.bytesToIp(optiunu_dic[x]))
+            if x == 1:
+                self.subnet_mask = BytesToData.bytesToIp(optiunu_dic[x])
             if x == 3:
-                print(BytesToData.bytesToIp(optiunu_dic[x]))
+                self.router = BytesToData.bytesToIp(optiunu_dic[x])
             if x == 6:
-                print(optiunu_dic[x])
+                self.domain_server = BytesToData.bytesToStr(optiunu_dic[x])
             if x == 28:
-                print(optiunu_dic[x])
+                self.broadcast_address = BytesToData.bytesToIp(optiunu_dic[x])
             if x == 51:
-                print(optiunu_dic[x])
+                self.lease_time = BytesToData.bytesToInt(optiunu_dic[x])
             if x == 58:
-                print(optiunu_dic[x])
+                self.renewal_time = BytesToData.bytesToInt(optiunu_dic[x])
             if x == 0:
-                print(optiunu_dic[x])
+                pass
             if x == 12:
                 self.host_name = BytesToData.bytesToStr(optiunu_dic[x])
             if x == 50:
@@ -194,7 +202,8 @@ class Packet:
         packet_pregatit += DataToBytes.strToBytes(self.server_name, 64)
         packet_pregatit += DataToBytes.strToBytes(self.boot_filename, 128)
         packet_pregatit += DataToBytes.hexToBytes(self.magic_cookie, 4)
-        #OPTIUNI
+
+        # OPTIUNI
         if self.op55: packet_pregatit += self.op55
         if self.host_name:
             packet_pregatit += DataToBytes.intToBytes(Optiuni.HOST_NAME.value) + DataToBytes.intToBytes(len(self.host_name))\
@@ -208,8 +217,32 @@ class Packet:
         if self.client_id:
             packet_pregatit += DataToBytes.intToBytes(Optiuni.CLIENT_ID.value) + DataToBytes.intToBytes(len(self.client_id)) \
                                + DataToBytes.strToBytes(self.client_id, len(self.client_id))
-        packet_pregatit += DataToBytes.intToBytes(255, 1)
 
+        if self.subnet_mask:
+            packet_pregatit += DataToBytes.intToBytes(Optiuni_request.SUBNET_MASK) + DataToBytes.intToBytes(4) \
+                                + DataToBytes.ipToBytes(self.subnet_mask)
+
+        if self.router:
+            packet_pregatit += DataToBytes.intToBytes(Optiuni_request.ROUTER) + DataToBytes.intToBytes(4) \
+                                + DataToBytes.ipToBytes(self.router)
+
+        if self.domain_server:
+            packet_pregatit += DataToBytes.intToBytes(Optiuni_request.DOMAIN_SERVER) + DataToBytes.intToBytes(len(self.domain_server)) \
+                               + DataToBytes.strToBytes(self.domain_server, len(self.domain_server))
+
+        if self.broadcast_address:
+            packet_pregatit += DataToBytes.intToBytes(Optiuni_request.BROADCAST_ADRESS) + DataToBytes.intToBytes(4) \
+                               + DataToBytes.ipToBytes(self.broadcast_address)
+
+        if self.lease_time:
+            packet_pregatit += DataToBytes.intToBytes(Optiuni_request.LEASE_TIME) + DataToBytes.intToBytes(4) \
+                               + DataToBytes.intToBytes(self.lease_time, 4)
+
+        if self.renewal_time:
+            packet_pregatit += DataToBytes.intToBytes(Optiuni_request.RENEWAL_TIME) + DataToBytes.intToBytes(4) \
+                               + DataToBytes.intToBytes(self.renewal_time, 4)
+
+        packet_pregatit += DataToBytes.intToBytes(255, 1)# FINAL PACKET
         return packet_pregatit
 
     def __str__(self):
@@ -233,7 +266,14 @@ class Packet:
         address_request: {self.address_request}\n
         dhcp_message_type: {self.dhcp_message_type}\n
         client: {self.client_id}\n
+        subnet_mask: {self.subnet_mask}\n
+        router: {self.router}\n
+        dns: {self.domain_server}\n
+        broadcard_addr: {self.broadcast_address}\n
+        lease: {self.lease_time}\n
+        renewal: {self.renewal_time}\n
         """
         return msg
+
 
 # OPTIUNI, DESPACHETARE

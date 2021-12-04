@@ -26,7 +26,8 @@ if __name__ == "__main__":
 
     # primire mesaj OFFER
     putem_citi, _, _ = select([sock], [], [], 5)
-    packet_2 = Packet(sock.recv(1024)) if putem_citi else None
+    bytes_offer = sock.recv(1024)
+    packet_2 = Packet(bytes_offer) if putem_citi else None
 
     # verificare si trimitere request
     if packet_2 and packet_2.dhcp_message_type == Tip_Mesaj.OFFER:

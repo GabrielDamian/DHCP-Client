@@ -18,6 +18,9 @@ if __name__ == "__main__":
     packet.dhcp_message_type = Tip_Mesaj.OFFER
     packet.opcode = Opcodes.REPLY
     packet.host_name = "setat de server"
+    packet.domain_server = "salut_gg.io"
+    packet.lease_time = 100
+    packet.renewal_time = 30
 
     # trimitere offer
     listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
