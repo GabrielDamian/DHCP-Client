@@ -106,7 +106,7 @@ class Packet:
         self.client_hardware_address = BytesToData.bytesToMac(packet[28:34]) if packet else '1A:2B:3C:3C:C4:EF'
         self.server_name = BytesToData.bytesToStr(packet[34:108]) if packet else ''
         self.boot_filename = BytesToData.bytesToStr(packet[108:236]) if packet else ''
-        self.magic_cookie = BytesToData.bytesToStr(packet[236:240]) if packet else int.from_bytes(b'\x63\x82\x53\x63', byteorder='big') #standard value: 99.130.83.99
+        self.magic_cookie = BytesToData.bytesToHex(packet[236:240]) if packet else int.from_bytes(b'\x63\x82\x53\x63', byteorder='big') #standard value: 99.130.83.99
         #OPTIUNI
 
         self.host_name = None
