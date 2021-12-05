@@ -1,3 +1,5 @@
+import time
+
 from DHCP_Packet import *
 
 BIND_ADDRESS = ('', 67)
@@ -23,6 +25,7 @@ if __name__ == "__main__":
     packet.renewal_time = 30
 
     # trimitere offer
+    time.sleep(2)
     listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
 
     # primire req
@@ -33,5 +36,6 @@ if __name__ == "__main__":
     packet_request.dhcp_message_type = Tip_Mesaj.ACK
 
     # trimitere ack
+    time.sleep(2)
     listener.sendto(packet_request.pregateste_packetul(), BROADCAST_ADDR)
 
