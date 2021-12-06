@@ -5,6 +5,9 @@ from DHCP_Packet import *
 BIND_ADDRESS = ('', 67)
 BROADCAST_ADDR = ('<broadcast>', 68)
 
+#diferentiere requesturi pentru testare
+counter_requests = 0
+
 if __name__ == "__main__":
     listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -41,14 +44,43 @@ if __name__ == "__main__":
             time.sleep(2)
             listener.sendto(packet_request.pregateste_packetul(), BROADCAST_ADDR)
         elif packet.dhcp_message_type == Tip_Mesaj.REQUEST:
-            print('Damian a vrut asta')
-            # construire ack
-            packet.opcode = Opcodes.REPLY
-            packet.lease_time = 100
-            packet.renewal_time = 7
-            packet.dhcp_message_type = Tip_Mesaj.ACK
-            packet.your_ip_address= '2.2.2.2'
 
-            # trimitere ack
-            time.sleep(2)
-            listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
+            if counter_requests == 0:
+                counter_requests +=1
+                print('Damian a vrut asta')
+                # construire ack
+                packet.opcode = Opcodes.REPLY
+                packet.lease_time = 100
+                packet.renewal_time = 5
+                packet.dhcp_message_type = Tip_Mesaj.ACK
+                packet.your_ip_address= '1.1.1.1'
+
+                # trimitere ack
+                time.sleep(2)
+                listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
+            elif counter_requests == 1:
+                counter_requests +=1
+                print('Damian a vrut asta')
+                # construire ack
+                packet.opcode = Opcodes.REPLY
+                packet.lease_time = 100
+                packet.renewal_time = 5
+                packet.dhcp_message_type = Tip_Mesaj.ACK
+                packet.your_ip_address = '2.2.2.2'
+
+                # trimitere ack
+                time.sleep(2)
+                listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
+            else:
+                counter_requests +=1
+                print('Damian a vrut asta')
+                # construire ack
+                packet.opcode = Opcodes.REPLY
+                packet.lease_time = 100
+                packet.renewal_time = 9
+                packet.dhcp_message_type = Tip_Mesaj.ACK
+                packet.your_ip_address = '3.3.3.3'
+
+                # trimitere ack
+                time.sleep(2)
+                listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)

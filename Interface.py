@@ -165,7 +165,7 @@ def reconnect():
     # setare si pornire clock
 
 window = Tk()
-window.geometry("800x600")
+window.geometry("800x720")
 
 host_name = StringVar()
 address_request = StringVar()
@@ -246,7 +246,28 @@ label_clock_info = Label(window, text="Timp ramas (renewal time): ")
 label_clock.place(x=175, y=550)
 label_clock_info.place(x=20, y=550)
 
-# current ip address / history of ip addresses
+#footer gui
+label_separator_footer = Label(window, text="__________________________________________________________________________________________________________________________", font=("Arial", 8))
+label_separator_footer.place(x=20, y=570)
+
+label_lease_time = Label(window, text="Lease time:")
+label_lease_time.place(x=20,y=600)
+
+label_renewal_time = Label(window, text="Renewal time:")
+label_renewal_time.place(x=20,y=630)
+
+label_timp_ramas = Label(window, text="Timp ramas (din renewal_time):")
+label_timp_ramas.place(x=20,y=660)
+
+label_istoric_ips = Label(window, text="Istoric ip-uri:")
+label_istoric_ips.place(x=400,y=600)
+
+text_istoric_ips =Text(window, height=3, width=45)
+text_istoric_ips.place(x=400,y=630)
+
+label_ip_curent = Label(text="Ip curent:")
+label_ip_curent.place(x=400,y=690)
+
 
 if __name__ == "__main__":
     window.mainloop()
