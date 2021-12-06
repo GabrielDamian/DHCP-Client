@@ -11,31 +11,44 @@ if __name__ == "__main__":
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     listener.bind(BIND_ADDRESS)
 
-    print("Server is listening")
-    # asteptare dicover
-    data = listener.recv(1000)
+    while True:
+        print("Server is listening")
+        # asteptare dicover
+        data = listener.recv(1000)
+        packet = Packet(data)
+        if packet.dhcp_message_type == Tip_Mesaj.DISCOVER:
+            # construire offer
+            packet.dhcp_message_type = Tip_Mesaj.OFFER
+            packet.opcode = Opcodes.REPLY
+            packet.host_name = "setat de server"
+            packet.domain_server = "salut_gg.io"
+            packet.your_ip_address = '1.1.1.1'
+            packet.lease_time = 100
+            packet.renewal_time = 5
 
-    # construire offer
-    packet = Packet(data)
-    packet.dhcp_message_type = Tip_Mesaj.OFFER
-    packet.opcode = Opcodes.REPLY
-    packet.host_name = "setat de server"
-    packet.domain_server = "salut_gg.io"
-    packet.lease_time = 100
-    packet.renewal_time = 30
+            # trimitere offer
+            time.sleep(2)
+            listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
 
-    # trimitere offer
-    time.sleep(2)
-    listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
+            # primire req
+            packet_request = Packet(listener.recv(1024))
 
-    # primire req
-    packet_request = Packet(listener.recv(1024))
+            # construire ack
+            packet_request.opcode = Opcodes.REPLY
+            packet_request.dhcp_message_type = Tip_Mesaj.ACK
 
-    # construire ack
-    packet_request.opcode = Opcodes.REPLY
-    packet_request.dhcp_message_type = Tip_Mesaj.ACK
+            # trimitere ack
+            time.sleep(2)
+            listener.sendto(packet_request.pregateste_packetul(), BROADCAST_ADDR)
+        elif packet.dhcp_message_type == Tip_Mesaj.REQUEST:
+            print('Damian a vrut asta')
+            # construire ack
+            packet.opcode = Opcodes.REPLY
+            packet.lease_time = 100
+            packet.renewal_time = 7
+            packet.dhcp_message_type = Tip_Mesaj.ACK
+            packet.your_ip_address= '2.2.2.2'
 
-    # trimitere ack
-    time.sleep(2)
-    listener.sendto(packet_request.pregateste_packetul(), BROADCAST_ADDR)
-
+            # trimitere ack
+            time.sleep(2)
+            listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
