@@ -46,7 +46,7 @@ if __name__ == "__main__":
         elif packet.dhcp_message_type == Tip_Mesaj.REQUEST:
 
             if counter_requests == 0:
-                counter_requests +=1
+                counter_requests += 1
                 print('Damian a vrut asta')
                 # construire ack
                 packet.opcode = Opcodes.REPLY
@@ -84,3 +84,5 @@ if __name__ == "__main__":
                 # trimitere ack
                 time.sleep(2)
                 listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
+        elif packet.dhcp_message_type == Tip_Mesaj.RELEASE:
+            print("eliberat datele")

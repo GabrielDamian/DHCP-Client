@@ -71,6 +71,7 @@ class Tip_Mesaj(IntEnum):
     REQUEST = 3
     DECLINE = 4
     ACK = 5
+    RELEASE = 6
 
 
 class Optiuni_request(IntEnum):
@@ -96,9 +97,9 @@ class Packet:
         self.opcode = Opcodes(BytesToData.bytesToInt(packet[0:1])) if packet else Opcodes.NONE
         self.hardware_type = BytesToData.bytesToInt(packet[1:2]) if packet else 1  #1 - Ethernet
         self.hardware_address_length = BytesToData.bytesToInt(packet[2:3]) if packet else 6
-        self.hops = BytesToData.bytesToInt(packet[3:4]) if packet else 0 #noduri intermediare prin care a trecut mesajul
-        self.transaction_id = BytesToData.bytesToHex(packet[4:8]) if packet else randrange(0x100000) #token random de identificare mesaj propriu
-        self.seconds_elapsed = BytesToData.bytesToInt(packet[8:10]) if packet else 0 #number of seconds elapsed since a client began an attempt to acquire or renew a lease
+        self.hops = BytesToData.bytesToInt(packet[3:4]) if packet else 0  # noduri intermediare prin care a trecut mesajul
+        self.transaction_id = BytesToData.bytesToHex(packet[4:8]) if packet else randrange(0x100000)  # token random de identificare mesaj propriu
+        self.seconds_elapsed = BytesToData.bytesToInt(packet[8:10]) if packet else 0 # number of seconds elapsed since a client began an attempt to acquire or renew a lease
         self.boot_flags = BytesToData.bytesToInt(packet[10:12]) if packet else 0
         self.client_ip_address = BytesToData.bytesToIp(packet[12:16]) if packet else '0.0.0.0'
         self.your_ip_address = BytesToData.bytesToIp(packet[16:20]) if packet else '0.0.0.0'
@@ -107,7 +108,7 @@ class Packet:
         self.client_hardware_address = BytesToData.bytesToMac(packet[28:34]) if packet else '1A:2B:3C:3C:C4:EF'
         self.server_name = BytesToData.bytesToStr(packet[34:108]) if packet else ''
         self.boot_filename = BytesToData.bytesToStr(packet[108:236]) if packet else ''
-        self.magic_cookie = BytesToData.bytesToHex(packet[236:240]) if packet else int.from_bytes(b'\x63\x82\x53\x63', byteorder='big') #standard value: 99.130.83.99
+        self.magic_cookie = BytesToData.bytesToHex(packet[236:240]) if packet else int.from_bytes(b'\x63\x82\x53\x63', byteorder='big')  # standard value: 99.130.83.99
         # OPTIUNI
 
         # optiuni client

@@ -17,15 +17,37 @@ sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 sock.bind(SOURCE_ADDR)
 
-# functions
 
-def decrement_timer():
-    global intrerupere_thread_clock
-    while not intrerupere_thread_clock and clock_value.get() > 0:
-        time.sleep(1)
-        clock_value.set(clock_value.get() - 1)
-    intrerupere_thread_clock = True
-    reconnect()
+class Clock(Thread):
+
+    all_clocks = []
+
+    @staticmethod
+    def stop_all_clocks():
+        for clock in Clock.all_clocks:
+            clock.stop()
+            Clock.all_clocks.remove(clock)
+
+    def __init__(self, time_variable: IntVar):
+        Thread.__init__(self)
+        self.time_variable = time_variable
+        self.stop_flag = False
+
+    def run(self):
+        Clock.all_clocks.append(self)
+        self.stop_flag = False
+        while not self.stop_flag and self.time_variable.get() > 0:
+            time.sleep(1)
+            self.time_variable.set(self.time_variable.get() - 1)
+
+        if self.time_variable.get() <= 0 and not self.stop_flag:
+            reconnect()
+
+    def stop(self):
+        self.stop_flag = True
+
+
+# functions
 
 
 def append_to_logging(text: str):
@@ -55,10 +77,7 @@ def generate_default():
 def connect():
 
     # manageriere timer ( oprire thread vechi vechi daca avem unul )
-    global clock_thread, intrerupere_thread_clock
-    if clock_thread:
-        intrerupere_thread_clock = True
-        Thread(target=lambda: time.sleep(1)).start()
+    Clock.stop_all_clocks()
 
     # ca sa nu ajungem la stare defectuasa oprim butonul de connect pe durata conectarii
     buton_connect["state"] = DISABLED
@@ -99,14 +118,11 @@ def connect():
         if packet_ack and packet_ack.dhcp_message_type == Tip_Mesaj.ACK:
             append_to_logging("Packet DHCPAck")
             istoric_ipuri.append(packet_ack.your_ip_address)
+            clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
             append_to_logging(packet_ack)
 
             # setare si pornire clock
-            global clock_value
-            clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
-            intrerupere_thread_clock = False
-            clock_thread = Thread(target=decrement_timer, args=())
-            clock_thread.start()
+            Clock(clock_value).start()
 
     # pornire inapoi a butonului connect
     buton_connect["state"] = NORMAL
@@ -114,10 +130,8 @@ def connect():
 
 def reconnect():
     global clock_value
-    # manageriere timer ( oprire thread vechi vechi daca avem unul )
-    global clock_thread, intrerupere_thread_clock
-    if clock_thread:
-        intrerupere_thread_clock = True
+    # manageriere timer
+    Clock.stop_all_clocks()
 
     for ip in istoric_ipuri: # lista nu o sa fie niciodata goala la apelarea functiei reconnect
         append_to_logging(f"Incercare connectare cu {ip}...")
@@ -135,13 +149,12 @@ def reconnect():
         else:
             # reusit conectare cu ip vechi
             istoric_ipuri.append(packet_ack.your_ip_address)
+            clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
             current_ip = packet_ack.your_ip_address
 
             # setare si pornire clock
-            clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
-            intrerupere_thread_clock = False
-            clock_thread = Thread(target=decrement_timer, args=())
-            clock_thread.start()
+            Clock(clock_value).start()
+
             append_to_logging(f"Reusire reconectare cu ip {current_ip}")
             return
 
@@ -155,14 +168,19 @@ def reconnect():
     else:
         current_ip = packet_ack.your_ip_address
         istoric_ipuri.append(current_ip)
+        clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
 
         # setare si pornire clock
-        clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
-        intrerupere_thread_clock = False
-        clock_thread = Thread(target=decrement_timer, args=())
-        clock_thread.start()
-        append_to_logging(f"Reusire reconectare cu ip {current_ip}")
-    # setare si pornire clock
+        Clock(clock_value).start()
+
+
+def disconnect():
+    Clock.stop_all_clocks()
+    generate_default()
+    append_to_logging("Resurse eliberate.")
+    Thread(target=lambda: (time.sleep(0.5) and clock_value.set(0)),args=()).start()
+
+
 
 window = Tk()
 window.geometry("800x720")
@@ -176,10 +194,12 @@ client_ip_address = StringVar()
 # creare widgeturi
 buton_connect = Button(window, text="CONNECT", command=lambda: Thread(target=connect, args=()).start())
 buton_generare_default = Button(window, text="GEN. DEFAULT",
-                                command=lambda: Thread(target=generate_default, args=()).start())
+                                command=lambda: Thread(target=disconnect, args=()).start())
+buton_deconectare = Button(window, text="DISCONNECT", command=lambda: Thread(target=disconnect, args=()).start())
 
 buton_connect.place(x=20, y=20)
 buton_generare_default.place(x=100, y=20)
+buton_deconectare.place(x=203,y=20)
 
 label_host_name = Label(window, text="HOST NAME", font=("Arial", 8))
 label_address_request = Label(window, text="ADDRESS REQUEST", font=("Arial", 8))
