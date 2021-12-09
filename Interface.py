@@ -9,6 +9,7 @@ from threading import Thread
 istoric_ipuri = []
 current_ip = None
 
+
 SOURCE_ADDR = ("", 68)
 DESTINATIN_ADDR = ('<broadcast>', 67)
 
@@ -24,9 +25,13 @@ class Clock(Thread):
 
     @staticmethod
     def stop_all_clocks():
+
         for clock in Clock.all_clocks:
             clock.stop()
             Clock.all_clocks.remove(clock)
+
+        time.sleep(1)
+        clock_value.set(0)
 
     def __init__(self, time_variable: IntVar):
         Thread.__init__(self)
@@ -46,7 +51,41 @@ class Clock(Thread):
     def stop(self):
         self.stop_flag = True
 
+def inputs_to_packet():
+    # host_name = StringVar()
+    # address_request = StringVar()
+    # client_id = StringVar()
+    # hardware_address = StringVar()
+    # client_ip_address = StringVar()
 
+    coduri = []
+    # for op in ['subnet_mask', 'router','domain_server', 'broadcast_address','lease_time','renewal_time' ]:
+    #     if(globals()[op] == True):
+    #         coduri.append(getattr(Optiuni_request, op.upper()))
+    # print("CEVA:",coduri)
+
+    if subnet_mask.get():
+        coduri.append(Optiuni_request(1))
+    if router.get():
+        coduri.append(Optiuni_request(3))
+    if domain_server.get():
+        coduri.append(Optiuni_request(6))
+    if broadcast_address.get():
+        coduri.append(Optiuni_request(28))
+    if lease_time.get():
+        coduri.append(Optiuni_request(51))
+    if renewal_time.get():
+        coduri.append(Optiuni_request(58))
+    print("CEVA:",coduri)
+
+    newPacket = Packet(packet=None, requested_options=coduri)
+    newPacket.host_name = host_name.get()
+    newPacket.address_request = address_request.get() if address_request.get() != 'None' else '0.0.0.0'
+    newPacket.client_id = client_id.get() if client_id.get() != 'None' else '1'
+    newPacket.client_hardware_address = hardware_address.get()
+    newPacket.client_ip_address = client_ip_address.get()
+
+    return newPacket
 # functions
 
 
@@ -63,7 +102,7 @@ def generate_default():
     host_name.set(packet.host_name)
     address_request.set(packet.address_request)
     client_id.set(packet.client_id)
-    hardware_address.set(packet.hardware_type)
+    hardware_address.set(packet.client_hardware_address)
     client_ip_address.set(packet.client_ip_address)
 
     subnet_mask.set(True)
@@ -84,11 +123,11 @@ def connect():
 
     # construire packet DHCP Discover
     append_to_logging("Initializare packet...")
-    packet = Packet(requested_options=[Optiuni_request.SUBNET_MASK, Optiuni_request.DOMAIN_SERVER])
-    packet.opcode = Opcodes.REQUEST
-    packet.host_name = "salut"
+    packet = inputs_to_packet()
+    # packet.opcode = Opcodes.REQUEST
+    # packet.host_name = "salut"
     packet.dhcp_message_type = Tip_Mesaj.DISCOVER
-    packet.boot_flags = 1
+    # packet.boot_flags = 1
     packet_bytes = packet.pregateste_packetul()
     append_to_logging("Packet initializat...")
 
@@ -117,9 +156,21 @@ def connect():
         # afisare rezultate
         if packet_ack and packet_ack.dhcp_message_type == Tip_Mesaj.ACK:
             append_to_logging("Packet DHCPAck")
-            istoric_ipuri.append(packet_ack.your_ip_address)
+
             clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
             append_to_logging(packet_ack)
+
+            lease_time_value.set(packet_ack.lease_time)
+            renewal_time_value.set(packet_ack.renewal_time)
+
+            if packet_ack.your_ip_address not in istoric_ipuri:
+                text_istoric_ips.config(state='normal')
+                text_istoric_ips.insert(END, f" {packet_ack.your_ip_address}\n")
+                text_istoric_ips.config(state='disabled')
+
+            ip_curent_value.set(packet_ack.your_ip_address)
+
+            istoric_ipuri.append(packet_ack.your_ip_address)
 
             # setare si pornire clock
             Clock(clock_value).start()
@@ -148,9 +199,20 @@ def reconnect():
             continue
         else:
             # reusit conectare cu ip vechi
-            istoric_ipuri.append(packet_ack.your_ip_address)
             clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
             current_ip = packet_ack.your_ip_address
+
+            lease_time_value.set(packet_ack.lease_time)
+            renewal_time_value.set(packet_ack.renewal_time)
+
+            if packet_ack.your_ip_address not in istoric_ipuri:
+                text_istoric_ips.config(state='normal')
+                text_istoric_ips.insert(END, f" {packet_ack.your_ip_address}\n")
+                text_istoric_ips.config(state='disabled')
+
+            ip_curent_value.set(packet_ack.your_ip_address)
+
+            istoric_ipuri.append(packet_ack.your_ip_address)
 
             # setare si pornire clock
             Clock(clock_value).start()
@@ -167,8 +229,19 @@ def reconnect():
         append_to_logging("Nu s-a putut reface conexiunea cu nici un server")
     else:
         current_ip = packet_ack.your_ip_address
-        istoric_ipuri.append(current_ip)
         clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
+
+        lease_time_value.set(packet_ack.lease_time)
+        renewal_time_value.set(packet_ack.renewal_time)
+
+        if packet_ack.your_ip_address not in istoric_ipuri:
+            text_istoric_ips.config(state='normal')
+            text_istoric_ips.insert(END, f" {packet_ack.your_ip_address}\n")
+            text_istoric_ips.config(state='disabled')
+
+        ip_curent_value.set(packet_ack.your_ip_address)
+
+        istoric_ipuri.append(current_ip)
 
         # setare si pornire clock
         Clock(clock_value).start()
@@ -176,9 +249,8 @@ def reconnect():
 
 def disconnect():
     Clock.stop_all_clocks()
-    generate_default()
     append_to_logging("Resurse eliberate.")
-    Thread(target=lambda: (time.sleep(0.5) and clock_value.set(0)),args=()).start()
+
 
 
 
@@ -194,7 +266,7 @@ client_ip_address = StringVar()
 # creare widgeturi
 buton_connect = Button(window, text="CONNECT", command=lambda: Thread(target=connect, args=()).start())
 buton_generare_default = Button(window, text="GEN. DEFAULT",
-                                command=lambda: Thread(target=disconnect, args=()).start())
+                                command=lambda: Thread(target=generate_default, args=()).start())
 buton_deconectare = Button(window, text="DISCONNECT", command=lambda: Thread(target=disconnect, args=()).start())
 
 buton_connect.place(x=20, y=20)
@@ -257,28 +329,41 @@ text_logging.place(x=400, y=70)
 label_logging = Label(window, text="Logging", font=("Arial", 10))
 label_logging.place(x=400, y=46)
 
-# clocking area
-clock_thread: Thread = None
-intrerupere_thread_clock = False
-clock_value = IntVar()
-label_clock = Label(window, textvariable=clock_value)
-label_clock_info = Label(window, text="Timp ramas (renewal time): ")
-label_clock.place(x=175, y=550)
-label_clock_info.place(x=20, y=550)
-
 #footer gui
 label_separator_footer = Label(window, text="__________________________________________________________________________________________________________________________", font=("Arial", 8))
 label_separator_footer.place(x=20, y=570)
 
+#Lease time area
+lease_time_value = IntVar()
+lease_time_value.set(0)
+
+label_lease_time_value = Label(window, textvariable=lease_time_value)
+label_lease_time_value.place(x=90,y=600)
+
 label_lease_time = Label(window, text="Lease time:")
 label_lease_time.place(x=20,y=600)
+
+
+
+#Renewal time area
+renewal_time_value = IntVar()
+renewal_time_value.set(0)
+
+label_renewal_time_value = Label(window, textvariable=renewal_time_value)
+label_renewal_time_value.place(x=106,y=631)
 
 label_renewal_time = Label(window, text="Renewal time:")
 label_renewal_time.place(x=20,y=630)
 
+#live clock area
+clock_value = IntVar()
+label_clock = Label(window, textvariable=clock_value)
+label_clock.place(x=197, y=661)
+
 label_timp_ramas = Label(window, text="Timp ramas (din renewal_time):")
 label_timp_ramas.place(x=20,y=660)
 
+#ip history area
 label_istoric_ips = Label(window, text="Istoric ip-uri:")
 label_istoric_ips.place(x=400,y=600)
 
@@ -287,6 +372,13 @@ text_istoric_ips.place(x=400,y=630)
 
 label_ip_curent = Label(text="Ip curent:")
 label_ip_curent.place(x=400,y=690)
+
+
+ip_curent_value = StringVar()
+ip_curent_value.set(0)
+
+label_ip_curent_value = Label(window, textvariable=ip_curent_value)
+label_ip_curent_value.place(x=453,y=690)
 
 
 if __name__ == "__main__":

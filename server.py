@@ -26,7 +26,7 @@ if __name__ == "__main__":
             packet.host_name = "setat de server"
             packet.domain_server = "salut_gg.io"
             packet.your_ip_address = '1.1.1.1'
-            packet.lease_time = 100
+            packet.lease_time = 10
             packet.renewal_time = 5
 
             # trimitere offer
@@ -50,8 +50,8 @@ if __name__ == "__main__":
                 print('Damian a vrut asta')
                 # construire ack
                 packet.opcode = Opcodes.REPLY
-                packet.lease_time = 100
-                packet.renewal_time = 5
+                packet.lease_time = 12
+                packet.renewal_time = 6
                 packet.dhcp_message_type = Tip_Mesaj.ACK
                 packet.your_ip_address= '1.1.1.1'
 
@@ -63,8 +63,8 @@ if __name__ == "__main__":
                 print('Damian a vrut asta')
                 # construire ack
                 packet.opcode = Opcodes.REPLY
-                packet.lease_time = 100
-                packet.renewal_time = 5
+                packet.lease_time = 14
+                packet.renewal_time = 3
                 packet.dhcp_message_type = Tip_Mesaj.ACK
                 packet.your_ip_address = '2.2.2.2'
 

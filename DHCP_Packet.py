@@ -73,7 +73,6 @@ class Tip_Mesaj(IntEnum):
     ACK = 5
     RELEASE = 6
 
-
 class Optiuni_request(IntEnum):
     SUBNET_MASK = 1
     ROUTER = 3
