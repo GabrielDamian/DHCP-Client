@@ -33,13 +33,15 @@ def generare_packet(packet:Packet , dhcp_type: Tip_Mesaj) -> Packet:
 
     if packet.address_request == '0.0.0.0':
         packet.your_ip_address = random_ip()
+        return packet
     else:
         decizie = randint(0, 1)
-        print(decizie)
+        print("decizie:",decizie)
         if decizie == 1:
             packet.your_ip_address = packet.address_request
-
-    return packet
+            return packet
+        else:
+            return None
 
 
 if __name__ == "__main__":
@@ -74,9 +76,15 @@ if __name__ == "__main__":
         elif packet.dhcp_message_type == Tip_Mesaj.REQUEST:
             # construire ack
             packet = generare_packet(packet, Tip_Mesaj.ACK)
+            #decid daca vr sa ii raspund (daca am sau nu resursele necesare), decizie random aici (in mod normal ar trebui verificate listele de ocupare a resurselor)
 
+            if packet != None:
+                listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
+            else:
+                pass
             # trimitere ack
             time.sleep(2)
-            listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
+
+
         elif packet.dhcp_message_type == Tip_Mesaj.RELEASE:
             print("eliberat datele")

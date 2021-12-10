@@ -261,7 +261,7 @@ def disconnect():
     append_to_logging("Resurse eliberate.")
 
 window = Tk()
-window.geometry("800x720")
+window.geometry("830x720")
 
 host_name = StringVar()
 address_request = StringVar()
@@ -361,7 +361,7 @@ check_box_renewal_time.place(x=20, y=480)
 # logging area
 logging_data = StringVar()
 logging_data_state = 'disabled'
-text_logging = Text(window, height=30, width=45, state=logging_data_state)
+text_logging = Text(window, height=30, width=49, state=logging_data_state)
 
 text_logging.place(x=400, y=70)
 label_logging = Label(window, text="Logging", font=("Arial", 10))
@@ -405,7 +405,7 @@ label_timp_ramas.place(x=20,y=660)
 label_istoric_ips = Label(window, text="Istoric ip-uri:")
 label_istoric_ips.place(x=400,y=600)
 
-text_istoric_ips =Text(window, height=3, width=45)
+text_istoric_ips =Text(window, height=3, width=49)
 text_istoric_ips.place(x=400,y=630)
 
 label_ip_curent = Label(text="Ip curent:")
