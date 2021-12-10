@@ -52,17 +52,8 @@ class Clock(Thread):
         self.stop_flag = True
 
 def inputs_to_packet():
-    # host_name = StringVar()
-    # address_request = StringVar()
-    # client_id = StringVar()
-    # hardware_address = StringVar()
-    # client_ip_address = StringVar()
 
     coduri = []
-    # for op in ['subnet_mask', 'router','domain_server', 'broadcast_address','lease_time','renewal_time' ]:
-    #     if(globals()[op] == True):
-    #         coduri.append(getattr(Optiuni_request, op.upper()))
-    # print("CEVA:",coduri)
 
     if subnet_mask.get():
         coduri.append(Optiuni_request(1))
@@ -76,7 +67,6 @@ def inputs_to_packet():
         coduri.append(Optiuni_request(51))
     if renewal_time.get():
         coduri.append(Optiuni_request(58))
-    print("CEVA:",coduri)
 
     newPacket = Packet(packet=None, requested_options=coduri)
     newPacket.host_name = host_name.get()
@@ -168,8 +158,15 @@ def connect():
                 text_istoric_ips.insert(END, f" {packet_ack.your_ip_address}\n")
                 text_istoric_ips.config(state='disabled')
 
-            ip_curent_value.set(packet_ack.your_ip_address)
+            subnet_mask_option.set(packet_ack.subnet_mask)
+            router_option.set(packet_ack.router)
+            domain_server_option.set(packet_ack.domain_server)
+            broadcast_address_option.set(packet_ack.broadcast_address)
+            lease_time_option.set(packet_ack.lease_time)
+            renewal_time_option.set(packet_ack.renewal_time)
 
+
+            ip_curent_value.set(packet_ack.your_ip_address)
             istoric_ipuri.append(packet_ack.your_ip_address)
 
             # setare si pornire clock
@@ -210,8 +207,14 @@ def reconnect():
                 text_istoric_ips.insert(END, f" {packet_ack.your_ip_address}\n")
                 text_istoric_ips.config(state='disabled')
 
-            ip_curent_value.set(packet_ack.your_ip_address)
+            subnet_mask_option.set(packet_ack.subnet_mask)
+            router_option.set(packet_ack.router)
+            domain_server_option.set(packet_ack.domain_server)
+            broadcast_address_option.set(packet_ack.broadcast_address)
+            lease_time_option.set(packet_ack.lease_time)
+            renewal_time_option.set(packet_ack.renewal_time)
 
+            ip_curent_value.set(packet_ack.your_ip_address)
             istoric_ipuri.append(packet_ack.your_ip_address)
 
             # setare si pornire clock
@@ -239,8 +242,14 @@ def reconnect():
             text_istoric_ips.insert(END, f" {packet_ack.your_ip_address}\n")
             text_istoric_ips.config(state='disabled')
 
-        ip_curent_value.set(packet_ack.your_ip_address)
+        subnet_mask_option.set(packet_ack.subnet_mask)
+        router_option.set(packet_ack.router)
+        domain_server_option.set(packet_ack.domain_server)
+        broadcast_address_option.set(packet_ack.broadcast_address)
+        lease_time_option.set(packet_ack.lease_time)
+        renewal_time_option.set(packet_ack.renewal_time)
 
+        ip_curent_value.set(packet_ack.your_ip_address)
         istoric_ipuri.append(current_ip)
 
         # setare si pornire clock
@@ -262,6 +271,8 @@ address_request = StringVar()
 client_id = StringVar()
 hardware_address = StringVar()
 client_ip_address = StringVar()
+
+
 
 # creare widgeturi
 buton_connect = Button(window, text="CONNECT", command=lambda: Thread(target=connect, args=()).start())
@@ -297,13 +308,43 @@ input_client_id.place(x=150, y=150, width=180, height=20)
 input_client_hardware_address.place(x=150, y=190, width=180, height=20)
 input_client_ip_address.place(x=150, y=230, width=180, height=20)
 
-# options
+# options checkboxes
 subnet_mask = BooleanVar()
 router = BooleanVar()
 domain_server = BooleanVar()
 broadcast_address = BooleanVar()
 lease_time = BooleanVar()
 renewal_time = BooleanVar()
+
+#options checkboxes values
+subnet_mask_option = StringVar()
+router_option = StringVar()
+domain_server_option = StringVar()
+broadcast_address_option = StringVar()
+lease_time_option = StringVar()
+renewal_time_option = StringVar()
+
+subnet_mask_option.set('...')
+router_option.set('...')
+domain_server_option.set('...')
+broadcast_address_option.set('...')
+lease_time_option.set('...')
+renewal_time_option.set('...')
+
+label_subnet_mask = Label(window, textvariable=subnet_mask_option)
+label_router = Label(window, textvariable=router_option)
+label_domain_server_option = Label(window,textvariable= domain_server_option)
+label_broadcast_address_option = Label(window, textvariable=broadcast_address_option)
+label_lease_time_option = Label(window, textvariable=lease_time_option)
+label_renewal_time_option = Label(window, textvariable=renewal_time_option)
+
+label_subnet_mask.place(x=150,y=280)
+label_router.place(x=150,y=320)
+label_domain_server_option.place(x=150,y=360)
+label_broadcast_address_option.place(x=150,y=400)
+label_lease_time_option.place(x=150, y=440)
+label_renewal_time_option.place(x=150, y=480)
+
 
 check_box_subnet_mask = Checkbutton(window, text='Subnet Mask', variable=subnet_mask, onvalue=1, offvalue=0)
 check_box_router = Checkbutton(window, text='Router', variable=router, onvalue=1, offvalue=0)
