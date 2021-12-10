@@ -114,10 +114,10 @@ def connect():
     # construire packet DHCP Discover
     append_to_logging("Initializare packet...")
     packet = inputs_to_packet()
-    # packet.opcode = Opcodes.REQUEST
-    # packet.host_name = "salut"
+    packet.opcode = Opcodes.REQUEST
     packet.dhcp_message_type = Tip_Mesaj.DISCOVER
-    # packet.boot_flags = 1
+
+    print(packet.op55)
     packet_bytes = packet.pregateste_packetul()
     append_to_logging("Packet initializat...")
 
@@ -181,13 +181,14 @@ def reconnect():
     # manageriere timer
     Clock.stop_all_clocks()
 
+    packet_request = inputs_to_packet()
+    packet_request.opcode = Opcodes.REQUEST
+    packet_request.dhcp_message_type = Tip_Mesaj.REQUEST
+
     for ip in istoric_ipuri: # lista nu o sa fie niciodata goala la apelarea functiei reconnect
         append_to_logging(f"Incercare connectare cu {ip}...")
         # creare packet req
-        packet_request = Packet()
         packet_request.address_request = ip
-        packet_request.opcode = Opcodes.REQUEST
-        packet_request.dhcp_message_type = Tip_Mesaj.REQUEST
         sock.sendto(packet_request.pregateste_packetul(), DESTINATIN_ADDR)
         putem_citi, _, _ = select([sock], [], [], 4)
         packet_ack = Packet(sock.recv(1024)) if putem_citi else None
@@ -224,7 +225,6 @@ def reconnect():
             return
 
     # nu s-a reusit conectarea cu un ip mai vechi
-    packet_request = Packet()
     sock.sendto(packet_request.pregateste_packetul(), DESTINATIN_ADDR)
     putem_citi, _, _ = select([sock], [], [], 2)
     packet_ack = Packet(sock.recv(1024)) if putem_citi else None
@@ -259,9 +259,6 @@ def reconnect():
 def disconnect():
     Clock.stop_all_clocks()
     append_to_logging("Resurse eliberate.")
-
-
-
 
 window = Tk()
 window.geometry("800x720")

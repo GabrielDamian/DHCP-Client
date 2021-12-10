@@ -1,12 +1,46 @@
 import time
-
+from random import randint, choice
 from DHCP_Packet import *
 
 BIND_ADDRESS = ('', 67)
 BROADCAST_ADDR = ('<broadcast>', 68)
 
-#diferentiere requesturi pentru testare
-counter_requests = 0
+
+def random_ip():
+    return f"{randint(60,167)}.{randint(60,167)}.{randint(60,167)}.{randint(60,167)}"
+
+
+def random_dns():
+    return choice(['cel_mai_bun_dns.com', 'balunga.io', 'nu_este_vina_noastra.dk', 'retele_de_calculatoare.ro', 'cat_este_ceasul.fr'])
+
+def generare_packet(packet:Packet , dhcp_type: Tip_Mesaj) -> Packet:
+    packet = Packet(data)
+    packet.dhcp_message_type = dhcp_type
+    packet.opcode = Opcodes.REPLY
+    for optiune in packet.extragere_din_op55():
+        if optiune == 1:
+            packet.subnet_mask = f"{255}.{255}.{240}.{0}"
+        if optiune == 3:
+            packet.router = random_ip()
+        if optiune == 6:
+            packet.domain_server = random_dns()
+        if optiune == 28:
+            packet.broadcast_address = random_ip()
+        if optiune == 51:
+            packet.lease_time = randint(8, 18)
+        if optiune == 58:
+            packet.renewal_time = packet.lease_time // 2 if packet.lease_time else randint(4, 9)
+
+    if packet.address_request == '0.0.0.0':
+        packet.your_ip_address = random_ip()
+    else:
+        decizie = randint(0, 1)
+        print(decizie)
+        if decizie == 1:
+            packet.your_ip_address = packet.address_request
+
+    return packet
+
 
 if __name__ == "__main__":
     listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -21,13 +55,7 @@ if __name__ == "__main__":
         packet = Packet(data)
         if packet.dhcp_message_type == Tip_Mesaj.DISCOVER:
             # construire offer
-            packet.dhcp_message_type = Tip_Mesaj.OFFER
-            packet.opcode = Opcodes.REPLY
-            packet.host_name = "setat de server"
-            packet.domain_server = "salut_gg.io"
-            packet.your_ip_address = '1.1.1.1'
-            packet.lease_time = 10
-            packet.renewal_time = 5
+            packet = generare_packet(packet, Tip_Mesaj.OFFER)
 
             # trimitere offer
             time.sleep(2)
@@ -44,45 +72,11 @@ if __name__ == "__main__":
             time.sleep(2)
             listener.sendto(packet_request.pregateste_packetul(), BROADCAST_ADDR)
         elif packet.dhcp_message_type == Tip_Mesaj.REQUEST:
+            # construire ack
+            packet = generare_packet(packet, Tip_Mesaj.ACK)
 
-            if counter_requests == 0:
-                counter_requests += 1
-                print('Damian a vrut asta')
-                # construire ack
-                packet.opcode = Opcodes.REPLY
-                packet.lease_time = 12
-                packet.renewal_time = 6
-                packet.dhcp_message_type = Tip_Mesaj.ACK
-                packet.your_ip_address= '1.1.1.1'
-
-                # trimitere ack
-                time.sleep(2)
-                listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
-            elif counter_requests == 1:
-                counter_requests +=1
-                print('Damian a vrut asta')
-                # construire ack
-                packet.opcode = Opcodes.REPLY
-                packet.lease_time = 14
-                packet.renewal_time = 3
-                packet.dhcp_message_type = Tip_Mesaj.ACK
-                packet.your_ip_address = '2.2.2.2'
-
-                # trimitere ack
-                time.sleep(2)
-                listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
-            else:
-                counter_requests +=1
-                print('Damian a vrut asta')
-                # construire ack
-                packet.opcode = Opcodes.REPLY
-                packet.lease_time = 100
-                packet.renewal_time = 9
-                packet.dhcp_message_type = Tip_Mesaj.ACK
-                packet.your_ip_address = '3.3.3.3'
-
-                # trimitere ack
-                time.sleep(2)
-                listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
+            # trimitere ack
+            time.sleep(2)
+            listener.sendto(packet.pregateste_packetul(), BROADCAST_ADDR)
         elif packet.dhcp_message_type == Tip_Mesaj.RELEASE:
             print("eliberat datele")

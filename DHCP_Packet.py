@@ -140,6 +140,12 @@ class Packet:
             for option in requested_options:
                 self.op55 += DataToBytes.intToBytes(option.value)
 
+    def extragere_din_op55(self) -> list:
+        optiuni = []
+        for octet in self.op55[2:]:
+            optiuni.append(int(octet))
+        return optiuni
+
     def set_optiuni_from_bytes(self, packet: bytes):
         index = 0
         optiunu_dic = {}
@@ -161,7 +167,9 @@ class Packet:
 
         for x in optiunu_dic:
             if x == 55:
-                pass
+                self.op55 = DataToBytes.intToBytes(55) + DataToBytes.intToBytes(len(optiunu_dic[55]))
+                for optiune in optiunu_dic[55]:
+                    self.op55 += DataToBytes.intToBytes(optiune)
             if x == 1:
                 self.subnet_mask = BytesToData.bytesToIp(optiunu_dic[x])
             if x == 3:
@@ -272,6 +280,7 @@ class Packet:
         broadcard_addr: {self.broadcast_address}\n
         lease: {self.lease_time}\n
         renewal: {self.renewal_time}\n
+        op55: {self.op55}\n
         """
         return msg
 
