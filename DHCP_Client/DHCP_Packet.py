@@ -6,7 +6,7 @@ from random import randrange
 class DataToBytes:
     @staticmethod
     def ipToBytes(data: str) -> bytes:
-        return socket.inet_aton(data) #length 4 octeti
+        return socket.inet_aton(data)  # length 4 octeti
 
     @staticmethod
     def hexToBytes(data, length: int = 4) -> bytes:
@@ -25,7 +25,7 @@ class DataToBytes:
         return final + (length - final.__len__()) * b'\x00'
 
     @staticmethod
-    def strToBytes(data: str, length: int) -> bytes :
+    def strToBytes(data: str, length: int) -> bytes:
         final = str.encode(data)
         return final + (length - len(final)) * b'\x00'
 
@@ -73,6 +73,7 @@ class Tip_Mesaj(IntEnum):
     ACK = 5
     RELEASE = 6
 
+
 class Optiuni_request(IntEnum):
     SUBNET_MASK = 1
     ROUTER = 3
@@ -92,13 +93,13 @@ class Optiuni(IntEnum):
 
 
 class Packet:
-    def __init__(self, packet=None, requested_options: list=()):
+    def __init__(self, packet=None, requested_options: list = ()):
         self.opcode = Opcodes(BytesToData.bytesToInt(packet[0:1])) if packet else Opcodes.NONE
-        self.hardware_type = BytesToData.bytesToInt(packet[1:2]) if packet else 1  #1 - Ethernet
+        self.hardware_type = BytesToData.bytesToInt(packet[1:2]) if packet else 1  # 1 - Ethernet
         self.hardware_address_length = BytesToData.bytesToInt(packet[2:3]) if packet else 6
         self.hops = BytesToData.bytesToInt(packet[3:4]) if packet else 0  # noduri intermediare prin care a trecut mesajul
         self.transaction_id = BytesToData.bytesToHex(packet[4:8]) if packet else randrange(0x100000)  # token random de identificare mesaj propriu
-        self.seconds_elapsed = BytesToData.bytesToInt(packet[8:10]) if packet else 0 # number of seconds elapsed since a client began an attempt to acquire or renew a lease
+        self.seconds_elapsed = BytesToData.bytesToInt(packet[8:10]) if packet else 0  # number of seconds elapsed since a client began an attempt to acquire or renew a lease
         self.boot_flags = BytesToData.bytesToInt(packet[10:12]) if packet else 0
         self.client_ip_address = BytesToData.bytesToIp(packet[12:16]) if packet else '0.0.0.0'
         self.your_ip_address = BytesToData.bytesToIp(packet[16:20]) if packet else '0.0.0.0'
@@ -107,10 +108,7 @@ class Packet:
         self.client_hardware_address = BytesToData.bytesToMac(packet[28:34]) if packet else '1A:2B:3C:3C:C4:EF'
         self.server_name = BytesToData.bytesToStr(packet[34:108]) if packet else ''
         self.boot_filename = BytesToData.bytesToStr(packet[108:236]) if packet else ''
-        self.magic_cookie = BytesToData.bytesToHex(packet[236:240]) if packet else int.from_bytes(b'\x63\x82\x53\x63', byteorder='big')  # standard value: 99.130.83.99
-        # OPTIUNI
-
-        # optiuni client
+        self.magic_cookie = BytesToData.bytesToHex(packet[236:240]) if packet else int.from_bytes(b'\x63\x82\x53\x63', byteorder='big')
         self.host_name = None
         self.address_request = None
         self.dhcp_message_type = None
@@ -133,7 +131,7 @@ class Packet:
         if packet:
             self.set_optiuni_from_bytes(packet[240:])
 
-    def suprascrie_optiuni_55(self,requested_options):
+    def suprascrie_optiuni_55(self, requested_options):
         if len(requested_options) > 0:
             self.op55 = DataToBytes.intToBytes(55, 1)
             self.op55 += DataToBytes.intToBytes(len(requested_options))
@@ -200,42 +198,46 @@ class Packet:
         packet_pregatit += DataToBytes.intToBytes(self.hardware_address_length)
         packet_pregatit += DataToBytes.intToBytes(self.hops)
         packet_pregatit += DataToBytes.hexToBytes(self.transaction_id)
-        packet_pregatit += DataToBytes.intToBytes(self.seconds_elapsed,2)
+        packet_pregatit += DataToBytes.intToBytes(self.seconds_elapsed, 2)
         packet_pregatit += DataToBytes.intToBytes(self.boot_flags, 2)
         packet_pregatit += DataToBytes.ipToBytes(self.client_ip_address)
         packet_pregatit += DataToBytes.ipToBytes(self.your_ip_address)
         packet_pregatit += DataToBytes.ipToBytes(self.server_ip_address)
         packet_pregatit += DataToBytes.ipToBytes(self.gateway_ip_address)
-        packet_pregatit += DataToBytes.macToBytes(self.client_hardware_address,16)
+        packet_pregatit += DataToBytes.macToBytes(self.client_hardware_address, 16)
         packet_pregatit += DataToBytes.strToBytes(self.server_name, 64)
         packet_pregatit += DataToBytes.strToBytes(self.boot_filename, 128)
         packet_pregatit += DataToBytes.hexToBytes(self.magic_cookie, 4)
 
-        # OPTIUNI
-        if self.op55: packet_pregatit += self.op55
+        if self.op55:
+            packet_pregatit += self.op55
+
         if self.host_name:
-            packet_pregatit += DataToBytes.intToBytes(Optiuni.HOST_NAME.value) + DataToBytes.intToBytes(len(self.host_name))\
-                               + DataToBytes.strToBytes(self.host_name,len(self.host_name))
+            packet_pregatit += DataToBytes.intToBytes(Optiuni.HOST_NAME.value) + DataToBytes.intToBytes(
+                len(self.host_name)) \
+                               + DataToBytes.strToBytes(self.host_name, len(self.host_name))
         if self.address_request:
-            packet_pregatit += DataToBytes.intToBytes(Optiuni.ADDRESS_REQUEST.value) + DataToBytes.intToBytes(4)\
+            packet_pregatit += DataToBytes.intToBytes(Optiuni.ADDRESS_REQUEST.value) + DataToBytes.intToBytes(4) \
                                + DataToBytes.ipToBytes(self.address_request)
         if self.dhcp_message_type:
-            packet_pregatit += DataToBytes.intToBytes(Optiuni.DHCP_MESSAGE_TYPE.value) + DataToBytes.intToBytes(1)\
+            packet_pregatit += DataToBytes.intToBytes(Optiuni.DHCP_MESSAGE_TYPE.value) + DataToBytes.intToBytes(1) \
                                + DataToBytes.intToBytes(self.dhcp_message_type)
         if self.client_id:
-            packet_pregatit += DataToBytes.intToBytes(Optiuni.CLIENT_ID.value) + DataToBytes.intToBytes(len(self.client_id)) \
+            packet_pregatit += DataToBytes.intToBytes(Optiuni.CLIENT_ID.value) + DataToBytes.intToBytes(
+                len(self.client_id)) \
                                + DataToBytes.strToBytes(self.client_id, len(self.client_id))
 
         if self.subnet_mask:
             packet_pregatit += DataToBytes.intToBytes(Optiuni_request.SUBNET_MASK) + DataToBytes.intToBytes(4) \
-                                + DataToBytes.ipToBytes(self.subnet_mask)
+                               + DataToBytes.ipToBytes(self.subnet_mask)
 
         if self.router:
             packet_pregatit += DataToBytes.intToBytes(Optiuni_request.ROUTER) + DataToBytes.intToBytes(4) \
-                                + DataToBytes.ipToBytes(self.router)
+                               + DataToBytes.ipToBytes(self.router)
 
         if self.domain_server:
-            packet_pregatit += DataToBytes.intToBytes(Optiuni_request.DOMAIN_SERVER) + DataToBytes.intToBytes(len(self.domain_server)) \
+            packet_pregatit += DataToBytes.intToBytes(Optiuni_request.DOMAIN_SERVER) + DataToBytes.intToBytes(
+                len(self.domain_server)) \
                                + DataToBytes.strToBytes(self.domain_server, len(self.domain_server))
 
         if self.broadcast_address:
@@ -250,39 +252,36 @@ class Packet:
             packet_pregatit += DataToBytes.intToBytes(Optiuni_request.RENEWAL_TIME) + DataToBytes.intToBytes(4) \
                                + DataToBytes.intToBytes(self.renewal_time, 4)
 
-        packet_pregatit += DataToBytes.intToBytes(255, 1)# FINAL PACKET
+        packet_pregatit += DataToBytes.intToBytes(255, 1)
         return packet_pregatit
 
     def __str__(self):
         msg: str = f"""
-        opcode: {self.opcode}\n
-        hardware_type: {self.hardware_type}\n
-        hardware_address_length: {self.hardware_address_length}\n
-        hops: {self.hops}\n
-        transaction_id: {self.transaction_id}\n
-        seconds_elapsed: {self.seconds_elapsed}\n
-        boot_flags: {self.boot_flags}\n
-        client_ip_address: {self.client_ip_address}\n
-        your_ip_address: {self.your_ip_address}\n
-        server_ip_address: {self.server_ip_address}\n
-        gateway_ip_address: {self.gateway_ip_address}\n
-        client_hardware_address: {self.client_hardware_address}\n
-        server_name: {self.server_name}\n
-        boot_filename: {self.boot_filename}\n
+        opcode: {self.opcode}
+        hardware_type: {self.hardware_type}
+        hardware_address_length: {self.hardware_address_length}
+        hops: {self.hops}
+        transaction_id: {self.transaction_id}
+        seconds_elapsed: {self.seconds_elapsed}
+        boot_flags: {self.boot_flags}
+        client_ip_address: {self.client_ip_address}
+        your_ip_address: {self.your_ip_address}
+        server_ip_address: {self.server_ip_address}
+        gateway_ip_address: {self.gateway_ip_address}
+        client_hardware_address: {self.client_hardware_address}
+        server_name: {self.server_name}
+        boot_filename: {self.boot_filename}
         OPTIUNI:\n
-        host_name: {self.host_name}\n
-        address_request: {self.address_request}\n
-        dhcp_message_type: {self.dhcp_message_type}\n
-        client: {self.client_id}\n
-        subnet_mask: {self.subnet_mask}\n
-        router: {self.router}\n
-        dns: {self.domain_server}\n
-        broadcard_addr: {self.broadcast_address}\n
-        lease: {self.lease_time}\n
-        renewal: {self.renewal_time}\n
-        op55: {self.op55}\n
+        host_name: {self.host_name}
+        address_request: {self.address_request}
+        dhcp_message_type: {self.dhcp_message_type}
+        client: {self.client_id}
+        subnet_mask: {self.subnet_mask}
+        router: {self.router}
+        dns: {self.domain_server}
+        broadcard_addr: {self.broadcast_address}
+        lease: {self.lease_time}
+        renewal: {self.renewal_time}
+        op55: {self.op55}
         """
         return msg
-
-
-# OPTIUNI, DESPACHETARE

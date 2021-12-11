@@ -1,31 +1,21 @@
 import time
-from tkinter import *
-from DHCP_Packet import *
+from tkinter import IntVar, StringVar, BooleanVar
+from tkinter import Tk, Button, Entry, Label, Text, Checkbutton, NORMAL, DISABLED, END
+from DHCP_Client.DHCP_Packet import Packet, Opcodes, Optiuni_request, Tip_Mesaj
 from select import select
 from threading import Thread
-
+from DHCP_Client import CLIENT_SOCKET, CLIENT_DESTINATIN_ADDR
 
 # initializare componente
 istoric_ipuri = []
 current_ip = None
 
 
-SOURCE_ADDR = ("", 68)
-DESTINATIN_ADDR = ('<broadcast>', 67)
-
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-sock.bind(SOURCE_ADDR)
-
-
 class Clock(Thread):
-
     all_clocks = []
 
     @staticmethod
     def stop_all_clocks():
-
         for clock in Clock.all_clocks:
             clock.stop()
             Clock.all_clocks.remove(clock)
@@ -39,20 +29,20 @@ class Clock(Thread):
         self.stop_flag = False
 
     def run(self):
-        Clock.all_clocks.append(self)
         self.stop_flag = False
+        Clock.all_clocks.append(self)
         while not self.stop_flag and self.time_variable.get() > 0:
             time.sleep(1)
             self.time_variable.set(self.time_variable.get() - 1)
 
-        if self.time_variable.get() <= 0 and not self.stop_flag:
+        if self.time_variable.get() <= 0 and (not self.stop_flag):
             reconnect()
 
     def stop(self):
         self.stop_flag = True
 
-def inputs_to_packet():
 
+def inputs_to_packet():
     coduri = []
 
     if subnet_mask.get():
@@ -68,15 +58,13 @@ def inputs_to_packet():
     if renewal_time.get():
         coduri.append(Optiuni_request(58))
 
-    newPacket = Packet(packet=None, requested_options=coduri)
-    newPacket.host_name = host_name.get()
-    newPacket.address_request = address_request.get() if address_request.get() != 'None' else '0.0.0.0'
-    newPacket.client_id = client_id.get() if client_id.get() != 'None' else '1'
-    newPacket.client_hardware_address = hardware_address.get()
-    newPacket.client_ip_address = client_ip_address.get()
-
-    return newPacket
-# functions
+    new_packet = Packet(packet=None, requested_options=coduri)
+    new_packet.host_name = host_name.get()
+    new_packet.address_request = address_request.get() if address_request.get() != '0.0.0.0' else '0.0.0.0'
+    new_packet.client_id = client_id.get() if client_id.get() != 'None' else '1'
+    new_packet.client_hardware_address = hardware_address.get()
+    new_packet.client_ip_address = client_ip_address.get()
+    return new_packet
 
 
 def append_to_logging(text: str):
@@ -94,7 +82,6 @@ def generate_default():
     client_id.set(packet.client_id)
     hardware_address.set(packet.client_hardware_address)
     client_ip_address.set(packet.client_ip_address)
-
     subnet_mask.set(True)
     router.set(False)
     domain_server.set(False)
@@ -104,11 +91,7 @@ def generate_default():
 
 
 def connect():
-
-    # manageriere timer ( oprire thread vechi vechi daca avem unul )
     Clock.stop_all_clocks()
-
-    # ca sa nu ajungem la stare defectuasa oprim butonul de connect pe durata conectarii
     buton_connect["state"] = DISABLED
 
     # construire packet DHCP Discover
@@ -117,38 +100,41 @@ def connect():
     packet.opcode = Opcodes.REQUEST
     packet.dhcp_message_type = Tip_Mesaj.DISCOVER
 
-    print(packet.op55)
     packet_bytes = packet.pregateste_packetul()
     append_to_logging("Packet initializat...")
 
     # trimitere DISCOVER
     append_to_logging("Trimitere DHCPDiscover...")
-    sock.sendto(packet_bytes, DESTINATIN_ADDR)
+    CLIENT_SOCKET.sendto(packet_bytes, CLIENT_DESTINATIN_ADDR)
 
     # primire mesaj OFFER
     append_to_logging("Asteptare DHCPOffer...")
-    putem_citi, _, _ = select([sock], [], [], 5)
-    bytes_offer = sock.recv(1024)
-    packet_2 = Packet(bytes_offer) if putem_citi else None
+    putem_citi, _, _ = select([CLIENT_SOCKET], [], [], 5)
+    if putem_citi:
+        bytes_offer = CLIENT_SOCKET.recv(1024)
+        packet_2 = Packet(bytes_offer)
+    else:
+        buton_connect["state"] = NORMAL
+        append_to_logging("\nNu am primit raspuns de la server")
 
     # verificare si trimitere request
     if packet_2 and packet_2.dhcp_message_type == Tip_Mesaj.OFFER:
         append_to_logging("Packet DHCPOffer primit...")
         packet_2.opcode = Opcodes.REQUEST
         packet_2.dhcp_message_type = Tip_Mesaj.REQUEST
-        sock.sendto(packet_2.pregateste_packetul(), DESTINATIN_ADDR)
+        CLIENT_SOCKET.sendto(packet_2.pregateste_packetul(), CLIENT_DESTINATIN_ADDR)
         append_to_logging("Trimitere DHCPRequest...")
 
         # asteptare packet ack
-        putem_citi, _, _ = select([sock], [], [], 5)
-        packet_ack = Packet(sock.recv(1024)) if putem_citi else None
+        putem_citi, _, _ = select([CLIENT_SOCKET], [], [], 5)
+        packet_ack = Packet(CLIENT_SOCKET.recv(1024)) if putem_citi else None
 
         # afisare rezultate
         if packet_ack and packet_ack.dhcp_message_type == Tip_Mesaj.ACK:
             append_to_logging("Packet DHCPAck")
 
             clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
-            append_to_logging(packet_ack)
+            append_to_logging(str(packet_ack))
 
             lease_time_value.set(packet_ack.lease_time)
             renewal_time_value.set(packet_ack.renewal_time)
@@ -165,34 +151,35 @@ def connect():
             lease_time_option.set(packet_ack.lease_time)
             renewal_time_option.set(packet_ack.renewal_time)
 
-
             ip_curent_value.set(packet_ack.your_ip_address)
-            istoric_ipuri.append(packet_ack.your_ip_address)
+            if packet_ack.your_ip_address not in istoric_ipuri:
+                istoric_ipuri.append(packet_ack.your_ip_address)
 
             # setare si pornire clock
             Clock(clock_value).start()
+            buton_connect["state"] = NORMAL
 
-    # pornire inapoi a butonului connect
-    buton_connect["state"] = NORMAL
+
 
 
 def reconnect():
     global clock_value
-    # manageriere timer
+    buton_connect["state"] = DISABLED
+
     Clock.stop_all_clocks()
 
     packet_request = inputs_to_packet()
     packet_request.opcode = Opcodes.REQUEST
     packet_request.dhcp_message_type = Tip_Mesaj.REQUEST
 
-    for ip in istoric_ipuri: # lista nu o sa fie niciodata goala la apelarea functiei reconnect
+    for ip in istoric_ipuri:  # lista nu o sa fie niciodata goala la apelarea functiei reconnect
         append_to_logging(f"Incercare connectare cu {ip}...")
         # creare packet req
         packet_request.address_request = ip
-        sock.sendto(packet_request.pregateste_packetul(), DESTINATIN_ADDR)
-        putem_citi, _, _ = select([sock], [], [], 4)
-        packet_ack = Packet(sock.recv(1024)) if putem_citi else None
-        if packet_ack == None:
+        CLIENT_SOCKET.sendto(packet_request.pregateste_packetul(), CLIENT_DESTINATIN_ADDR)
+        putem_citi, _, _ = select([CLIENT_SOCKET], [], [], 4)
+        packet_ack = Packet(CLIENT_SOCKET.recv(1024)) if putem_citi else None
+        if packet_ack is None:
             append_to_logging(f"Nu s-a reusit reconnectarea cu {ip}")
             continue
         else:
@@ -216,19 +203,22 @@ def reconnect():
             renewal_time_option.set(packet_ack.renewal_time)
 
             ip_curent_value.set(packet_ack.your_ip_address)
-            istoric_ipuri.append(packet_ack.your_ip_address)
+            if packet_ack.your_ip_address not in istoric_ipuri:
+                istoric_ipuri.append(packet_ack.your_ip_address)
 
-            # setare si pornire clock
             Clock(clock_value).start()
-
+            buton_connect["state"] = NORMAL
             append_to_logging(f"Reusire reconectare cu ip {current_ip}")
             return
 
     # nu s-a reusit conectarea cu un ip mai vechi
-    sock.sendto(packet_request.pregateste_packetul(), DESTINATIN_ADDR)
-    putem_citi, _, _ = select([sock], [], [], 2)
-    packet_ack = Packet(sock.recv(1024)) if putem_citi else None
-    if packet_ack == None:
+    packet_request.address_request = '0.0.0.0'
+    CLIENT_SOCKET.sendto(packet_request.pregateste_packetul(), CLIENT_DESTINATIN_ADDR)
+    putem_citi, _, _ = select([CLIENT_SOCKET], [], [], 2)
+    packet_ack = Packet(CLIENT_SOCKET.recv(1024)) if putem_citi else None
+    if packet_ack is None:
+        Clock.stop_all_clocks()
+        time.sleep(1)
         append_to_logging("Nu s-a putut reface conexiunea cu nici un server")
     else:
         current_ip = packet_ack.your_ip_address
@@ -250,76 +240,48 @@ def reconnect():
         renewal_time_option.set(packet_ack.renewal_time)
 
         ip_curent_value.set(packet_ack.your_ip_address)
-        istoric_ipuri.append(current_ip)
+        if current_ip not in istoric_ipuri:
+            istoric_ipuri.append(current_ip)
 
-        # setare si pornire clock
+        append_to_logging(f"Reusire reconectare cu ip {current_ip}")
+
+        buton_connect["state"] = NORMAL
         Clock(clock_value).start()
 
 
 def disconnect():
     Clock.stop_all_clocks()
     append_to_logging("Resurse eliberate.")
+    buton_connect["state"] = NORMAL
+
 
 window = Tk()
 window.geometry("830x720")
 
+# variabiles
+logging_data_state = 'disabled'
 host_name = StringVar()
 address_request = StringVar()
 client_id = StringVar()
 hardware_address = StringVar()
 client_ip_address = StringVar()
-
-
-
-# creare widgeturi
-buton_connect = Button(window, text="CONNECT", command=lambda: Thread(target=connect, args=()).start())
-buton_generare_default = Button(window, text="GEN. DEFAULT",
-                                command=lambda: Thread(target=generate_default, args=()).start())
-buton_deconectare = Button(window, text="DISCONNECT", command=lambda: Thread(target=disconnect, args=()).start())
-
-buton_connect.place(x=20, y=20)
-buton_generare_default.place(x=100, y=20)
-buton_deconectare.place(x=203,y=20)
-
-label_host_name = Label(window, text="HOST NAME", font=("Arial", 8))
-label_address_request = Label(window, text="ADDRESS REQUEST", font=("Arial", 8))
-label_client_id = Label(window, text="CLIENT ID", font=("Arial", 8))
-label_client_hardware_address = Label(window, text="MAC", font=("Arial", 8))
-label_client_ip_address = Label(window, text="CLIENT IP ADDRESS", font=("Arial", 8))
-
-label_host_name.place(x=20, y=70)
-label_address_request.place(x=20, y=110)
-label_client_id.place(x=20, y=150)
-label_client_hardware_address.place(x=20, y=190)
-label_client_ip_address.place(x=20, y=230)
-
-input_host_name = Entry(window, textvariable=host_name, font=('calibre', 10, 'normal'))
-input_address_request = Entry(window, textvariable=address_request, font=('calibre', 10, 'normal'))
-input_client_id = Entry(window, textvariable=client_id, font=('calibre', 10, 'normal'))
-input_client_hardware_address = Entry(window, textvariable=hardware_address, font=('calibre', 10, 'normal'))
-input_client_ip_address = Entry(window, textvariable=client_ip_address, font=('calibre', 10, 'normal'))
-
-input_host_name.place(x=150, y=70, width=180, height=20)
-input_address_request.place(x=150, y=110, width=180, height=20)
-input_client_id.place(x=150, y=150, width=180, height=20)
-input_client_hardware_address.place(x=150, y=190, width=180, height=20)
-input_client_ip_address.place(x=150, y=230, width=180, height=20)
-
-# options checkboxes
 subnet_mask = BooleanVar()
 router = BooleanVar()
 domain_server = BooleanVar()
 broadcast_address = BooleanVar()
 lease_time = BooleanVar()
 renewal_time = BooleanVar()
-
-#options checkboxes values
 subnet_mask_option = StringVar()
 router_option = StringVar()
 domain_server_option = StringVar()
 broadcast_address_option = StringVar()
 lease_time_option = StringVar()
 renewal_time_option = StringVar()
+logging_data = StringVar()
+lease_time_value = IntVar()
+renewal_time_value = IntVar()
+clock_value = IntVar()
+ip_curent_value = StringVar()
 
 subnet_mask_option.set('...')
 router_option.set('...')
@@ -327,29 +289,62 @@ domain_server_option.set('...')
 broadcast_address_option.set('...')
 lease_time_option.set('...')
 renewal_time_option.set('...')
+ip_curent_value.set(0)
+lease_time_value.set(0)
+renewal_time_value.set(0)
 
-label_subnet_mask = Label(window, textvariable=subnet_mask_option)
-label_router = Label(window, textvariable=router_option)
-label_domain_server_option = Label(window,textvariable= domain_server_option)
-label_broadcast_address_option = Label(window, textvariable=broadcast_address_option)
-label_lease_time_option = Label(window, textvariable=lease_time_option)
-label_renewal_time_option = Label(window, textvariable=renewal_time_option)
+# widgeturi
 
-label_subnet_mask.place(x=150,y=280)
-label_router.place(x=150,y=320)
-label_domain_server_option.place(x=150,y=360)
-label_broadcast_address_option.place(x=150,y=400)
-label_lease_time_option.place(x=150, y=440)
-label_renewal_time_option.place(x=150, y=480)
-
+buton_connect = Button(window, text="CONNECT", command=lambda: Thread(target=connect, args=()).start())
+buton_generare_default = Button(window, text="GEN. DEFAULT",
+                                command=lambda: Thread(target=generate_default, args=()).start())
+buton_deconectare = Button(window, text="DISCONNECT", command=lambda: Thread(target=disconnect, args=()).start())
 
 check_box_subnet_mask = Checkbutton(window, text='Subnet Mask', variable=subnet_mask, onvalue=1, offvalue=0)
 check_box_router = Checkbutton(window, text='Router', variable=router, onvalue=1, offvalue=0)
 check_box_domain_server = Checkbutton(window, text='Domain Server', variable=domain_server, onvalue=1, offvalue=0)
-check_box_broadcast_address = Checkbutton(window, text='Broadcast address', variable=broadcast_address, onvalue=1,
-                                          offvalue=0)
+check_box_broadcast_address = Checkbutton(window, text='Broadcast address', variable=broadcast_address, onvalue=1, offvalue=0)
 check_box_lease_time = Checkbutton(window, text='Lease Time', variable=lease_time, onvalue=1, offvalue=0)
 check_box_renewal_time = Checkbutton(window, text='Renewal Time', variable=renewal_time, onvalue=1, offvalue=0)
+
+label_host_name = Label(window, text="HOST NAME", font=("Arial", 8))
+label_address_request = Label(window, text="ADDRESS REQUEST", font=("Arial", 8))
+label_client_id = Label(window, text="CLIENT ID", font=("Arial", 8))
+label_client_hardware_address = Label(window, text="MAC", font=("Arial", 8))
+label_client_ip_address = Label(window, text="CLIENT IP ADDRESS", font=("Arial", 8))
+label_subnet_mask = Label(window, textvariable=subnet_mask_option)
+label_router = Label(window, textvariable=router_option)
+label_domain_server_option = Label(window, textvariable=domain_server_option)
+label_broadcast_address_option = Label(window, textvariable=broadcast_address_option)
+label_lease_time_option = Label(window, textvariable=lease_time_option)
+label_renewal_time_option = Label(window, textvariable=renewal_time_option)
+label_logging = Label(window, text="Logging", font=("Arial", 10))
+label_separator_footer = Label(window,
+                               text="__________________________________________________________________________________________________________________________",
+                               font=("Arial", 8))
+label_lease_time_value = Label(window, textvariable=lease_time_value)
+label_lease_time = Label(window, text="Lease time:")
+label_renewal_time_value = Label(window, textvariable=renewal_time_value)
+label_renewal_time = Label(window, text="Renewal time:")
+label_clock = Label(window, textvariable=clock_value)
+label_timp_ramas = Label(window, text="Timp ramas (din renewal_time):")
+label_istoric_ips = Label(window, text="Istoric ip-uri:")
+label_ip_curent = Label(text="Ip curent:")
+label_ip_curent_value = Label(window, textvariable=ip_curent_value)
+
+input_host_name = Entry(window, textvariable=host_name, font=('calibre', 10, 'normal'))
+input_address_request = Entry(window, textvariable=address_request, font=('calibre', 10, 'normal'))
+input_client_id = Entry(window, textvariable=client_id, font=('calibre', 10, 'normal'))
+input_client_hardware_address = Entry(window, textvariable=hardware_address, font=('calibre', 10, 'normal'))
+input_client_ip_address = Entry(window, textvariable=client_ip_address, font=('calibre', 10, 'normal'))
+
+text_logging = Text(window, height=30, width=49, state=logging_data_state)
+text_istoric_ips = Text(window, height=3, width=49)
+
+# setare widgeturi
+buton_connect.place(x=20, y=20)
+buton_generare_default.place(x=100, y=20)
+buton_deconectare.place(x=203, y=20)
 
 check_box_subnet_mask.place(x=20, y=280)
 check_box_router.place(x=20, y=320)
@@ -358,65 +353,37 @@ check_box_broadcast_address.place(x=20, y=400)
 check_box_lease_time.place(x=20, y=440)
 check_box_renewal_time.place(x=20, y=480)
 
-# logging area
-logging_data = StringVar()
-logging_data_state = 'disabled'
-text_logging = Text(window, height=30, width=49, state=logging_data_state)
+label_host_name.place(x=20, y=70)
+label_address_request.place(x=20, y=110)
+label_client_id.place(x=20, y=150)
+label_client_hardware_address.place(x=20, y=190)
+label_client_ip_address.place(x=20, y=230)
+label_subnet_mask.place(x=150, y=280)
+label_router.place(x=150, y=320)
+label_domain_server_option.place(x=150, y=360)
+label_broadcast_address_option.place(x=150, y=400)
+label_lease_time_option.place(x=150, y=440)
+label_renewal_time_option.place(x=150, y=480)
+label_logging.place(x=400, y=46)
+label_separator_footer.place(x=20, y=570)
+label_lease_time_value.place(x=90, y=600)
+label_lease_time.place(x=20, y=600)
+label_renewal_time_value.place(x=106, y=631)
+label_renewal_time.place(x=20, y=630)
+label_clock.place(x=197, y=661)
+label_timp_ramas.place(x=20, y=660)
+label_ip_curent.place(x=400, y=690)
+label_ip_curent_value.place(x=453, y=690)
+label_istoric_ips.place(x=400, y=600)
+
+input_host_name.place(x=150, y=70, width=180, height=20)
+input_address_request.place(x=150, y=110, width=180, height=20)
+input_client_id.place(x=150, y=150, width=180, height=20)
+input_client_hardware_address.place(x=150, y=190, width=180, height=20)
+input_client_ip_address.place(x=150, y=230, width=180, height=20)
 
 text_logging.place(x=400, y=70)
-label_logging = Label(window, text="Logging", font=("Arial", 10))
-label_logging.place(x=400, y=46)
-
-#footer gui
-label_separator_footer = Label(window, text="__________________________________________________________________________________________________________________________", font=("Arial", 8))
-label_separator_footer.place(x=20, y=570)
-
-#Lease time area
-lease_time_value = IntVar()
-lease_time_value.set(0)
-
-label_lease_time_value = Label(window, textvariable=lease_time_value)
-label_lease_time_value.place(x=90,y=600)
-
-label_lease_time = Label(window, text="Lease time:")
-label_lease_time.place(x=20,y=600)
-
-
-
-#Renewal time area
-renewal_time_value = IntVar()
-renewal_time_value.set(0)
-
-label_renewal_time_value = Label(window, textvariable=renewal_time_value)
-label_renewal_time_value.place(x=106,y=631)
-
-label_renewal_time = Label(window, text="Renewal time:")
-label_renewal_time.place(x=20,y=630)
-
-#live clock area
-clock_value = IntVar()
-label_clock = Label(window, textvariable=clock_value)
-label_clock.place(x=197, y=661)
-
-label_timp_ramas = Label(window, text="Timp ramas (din renewal_time):")
-label_timp_ramas.place(x=20,y=660)
-
-#ip history area
-label_istoric_ips = Label(window, text="Istoric ip-uri:")
-label_istoric_ips.place(x=400,y=600)
-
-text_istoric_ips =Text(window, height=3, width=49)
-text_istoric_ips.place(x=400,y=630)
-
-label_ip_curent = Label(text="Ip curent:")
-label_ip_curent.place(x=400,y=690)
-
-
-ip_curent_value = StringVar()
-ip_curent_value.set(0)
-
-label_ip_curent_value = Label(window, textvariable=ip_curent_value)
-label_ip_curent_value.place(x=453,y=690)
+text_istoric_ips.place(x=400, y=630)
 
 
 if __name__ == "__main__":
