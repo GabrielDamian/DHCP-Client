@@ -164,32 +164,33 @@ class Packet:
             index += 1 + 1 + op_size
 
         for x in optiunu_dic:
-            if x == 55:
-                self.op55 = DataToBytes.intToBytes(55) + DataToBytes.intToBytes(len(optiunu_dic[55]))
-                for optiune in optiunu_dic[55]:
-                    self.op55 += DataToBytes.intToBytes(optiune)
-            if x == 1:
-                self.subnet_mask = BytesToData.bytesToIp(optiunu_dic[x])
-            if x == 3:
-                self.router = BytesToData.bytesToIp(optiunu_dic[x])
-            if x == 6:
-                self.domain_server = BytesToData.bytesToStr(optiunu_dic[x])
-            if x == 28:
-                self.broadcast_address = BytesToData.bytesToIp(optiunu_dic[x])
-            if x == 51:
-                self.lease_time = BytesToData.bytesToInt(optiunu_dic[x])
-            if x == 58:
-                self.renewal_time = BytesToData.bytesToInt(optiunu_dic[x])
-            if x == 0:
-                pass
-            if x == 12:
-                self.host_name = BytesToData.bytesToStr(optiunu_dic[x])
-            if x == 50:
-                self.address_request = BytesToData.bytesToIp(optiunu_dic[x])
-            if x == 53:
-                self.dhcp_message_type = BytesToData.bytesToInt(optiunu_dic[x])
-            if x == 61:
-                self.client_id = BytesToData.bytesToStr(optiunu_dic[x])
+            if optiunu_dic[x] is not None:
+                if x == 55 and len(optiunu_dic[55]) > 0:
+                    self.op55 = DataToBytes.intToBytes(55) + DataToBytes.intToBytes(len(optiunu_dic[55]))
+                    for optiune in optiunu_dic[55]:
+                        self.op55 += DataToBytes.intToBytes(optiune)
+                if x == 1:
+                    self.subnet_mask = BytesToData.bytesToIp(optiunu_dic[x])
+                if x == 3:
+                    self.router = BytesToData.bytesToIp(optiunu_dic[x])
+                if x == 6:
+                    self.domain_server = BytesToData.bytesToStr(optiunu_dic[x])
+                if x == 28:
+                    self.broadcast_address = BytesToData.bytesToIp(optiunu_dic[x])
+                if x == 51:
+                    self.lease_time = BytesToData.bytesToInt(optiunu_dic[x])
+                if x == 58:
+                    self.renewal_time = BytesToData.bytesToInt(optiunu_dic[x])
+                if x == 0:
+                    pass
+                if x == 12:
+                    self.host_name = BytesToData.bytesToStr(optiunu_dic[x])
+                if x == 50:
+                    self.address_request = BytesToData.bytesToIp(optiunu_dic[x])
+                if x == 53:
+                    self.dhcp_message_type = BytesToData.bytesToInt(optiunu_dic[x])
+                if x == 61:
+                    self.client_id = BytesToData.bytesToStr(optiunu_dic[x])
 
     def pregateste_packetul(self) -> bytes:
         packet_pregatit = b''

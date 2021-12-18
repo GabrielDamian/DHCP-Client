@@ -19,18 +19,18 @@ def generare_packet(packet: Packet, dhcp_type: Tip_Mesaj) -> Optional[Packet]:
     for optiune in packet.extragere_din_op55():
         if optiune == 1:
             packet.subnet_mask = f"{255}.{255}.{240}.{0}"
-        if optiune == 3:
+        elif optiune == 3:
             packet.router = random_ip()
-        if optiune == 6:
+        elif optiune == 6:
             packet.domain_server = random_dns()
-        if optiune == 28:
+        elif optiune == 28:
             packet.broadcast_address = random_ip()
-        if optiune == 51:
+        elif optiune == 51:
             packet.lease_time = randint(8, 18)
-        if optiune == 58:
+        elif optiune == 58:
             packet.renewal_time = packet.lease_time // 2 if packet.lease_time else randint(4, 9)
 
-    if packet.address_request == '0.0.0.0':
+    if packet.address_request is None:
         packet.your_ip_address = random_ip()
         return packet
     else:

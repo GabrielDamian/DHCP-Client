@@ -60,7 +60,7 @@ def inputs_to_packet():
 
     new_packet = Packet(packet=None, requested_options=coduri)
     new_packet.host_name = host_name.get()
-    new_packet.address_request = address_request.get() if address_request.get() != '0.0.0.0' else '0.0.0.0'
+    new_packet.address_request = address_request.get() if address_request.get() != 'None' else None
     new_packet.client_id = client_id.get() if client_id.get() != 'None' else '1'
     new_packet.client_hardware_address = hardware_address.get()
     new_packet.client_ip_address = client_ip_address.get()
@@ -110,6 +110,7 @@ def connect():
     # primire mesaj OFFER
     append_to_logging("Asteptare DHCPOffer...")
     putem_citi, _, _ = select([CLIENT_SOCKET], [], [], 5)
+    packet_2 = None
     if putem_citi:
         bytes_offer = CLIENT_SOCKET.recv(1024)
         packet_2 = Packet(bytes_offer)
@@ -158,8 +159,6 @@ def connect():
             # setare si pornire clock
             Clock(clock_value).start()
             buton_connect["state"] = NORMAL
-
-
 
 
 def reconnect():
