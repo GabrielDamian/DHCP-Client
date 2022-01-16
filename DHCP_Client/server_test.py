@@ -1,5 +1,7 @@
 from random import randint, choice
-from DHCP_Client.DHCP_Packet import Packet, Tip_Mesaj, Opcodes
+from DHCP_Client.dhcp_packet import Packet
+from DHCP_Client.message_type import MessageType
+from DHCP_Client.opcodes import Opcodes
 from DHCP_Client import SERVER_SOCKET, SERVER_BROADCAST_ADDR
 from typing import Optional
 
@@ -13,10 +15,10 @@ def random_dns() -> str:
                    'nu_este_vina_noastra.dk', 'retele_de_calculatoare.ro', 'cat_este_ceasul.fr'])
 
 
-def generare_packet(packet: Packet, dhcp_type: Tip_Mesaj) -> Optional[Packet]:
+def generare_packet(packet: Packet, dhcp_type: MessageType) -> Optional[Packet]:
     packet.dhcp_message_type = dhcp_type
     packet.opcode = Opcodes.REPLY
-    for optiune in packet.extragere_din_op55():
+    for optiune in packet.get_server_options():
         if optiune == 1:
             packet.subnet_mask = f"{255}.{255}.{240}.{0}"
         elif optiune == 3:
@@ -49,31 +51,31 @@ def run_server():
         # asteptare dicover
         data = SERVER_SOCKET.recv(1000)
         packet = Packet(data)
-        if packet.dhcp_message_type == Tip_Mesaj.DISCOVER:
+        if packet.dhcp_message_type == MessageType.DISCOVER:
             # construire offer
-            packet = generare_packet(packet, Tip_Mesaj.OFFER)
+            packet = generare_packet(packet, MessageType.OFFER)
 
             # trimitere offer
             if packet is not None:
-                SERVER_SOCKET.sendto(packet.pregateste_packetul(), SERVER_BROADCAST_ADDR)
+                SERVER_SOCKET.sendto(packet.encode(), SERVER_BROADCAST_ADDR)
 
                 # primire req
                 packet_request = Packet(SERVER_SOCKET.recv(1024))
 
                 # construire ack
                 packet_request.opcode = Opcodes.REPLY
-                packet_request.dhcp_message_type = Tip_Mesaj.ACK
+                packet_request.dhcp_message_type = MessageType.ACK
 
                 # trimitere ack
-                SERVER_SOCKET.sendto(packet_request.pregateste_packetul(), SERVER_BROADCAST_ADDR)
-        elif packet.dhcp_message_type == Tip_Mesaj.REQUEST:
+                SERVER_SOCKET.sendto(packet_request.encode(), SERVER_BROADCAST_ADDR)
+        elif packet.dhcp_message_type == MessageType.REQUEST:
             # construire ack
-            packet = generare_packet(packet, Tip_Mesaj.ACK)
+            packet = generare_packet(packet, MessageType.ACK)
 
             # trimitere ack
             if packet is not None:
-                SERVER_SOCKET.sendto(packet.pregateste_packetul(), SERVER_BROADCAST_ADDR)
-        elif packet.dhcp_message_type == Tip_Mesaj.RELEASE:
+                SERVER_SOCKET.sendto(packet.encode(), SERVER_BROADCAST_ADDR)
+        elif packet.dhcp_message_type == MessageType.RELEASE:
             print("eliberat datele")
 
 
