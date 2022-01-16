@@ -1,16 +1,16 @@
 from random import randrange
 
-from DHCP_Client.bytes_to_data import BytesToData
-from DHCP_Client.client_options import ClientOptions
-from DHCP_Client.data_to_bytes import DataToBytes
-from DHCP_Client.opcodes import Opcodes
-from DHCP_Client.server_options import ServerOptions
+from DHCP.bytes_to_data import BytesToData
+from DHCP.client_options import ClientOptions
+from DHCP.data_to_bytes import DataToBytes
+from DHCP.opcodes import Opcodes
+from DHCP.server_options import ServerOptions
 
 
 class Packet:
     def __init__(self, packet=None, requested_options: list = ()):
         self.opcode = Opcodes(BytesToData.bytes_to_int(packet[0:1])) if packet else Opcodes.NONE
-        self.hardware_type = BytesToData.bytes_to_int(packet[1:2]) if packet else 1  # 1 - Ethernet
+        self.hardware_type = BytesToData.bytes_to_int(packet[1:2]) if packet else 1
         self.hardware_address_length = BytesToData.bytes_to_int(packet[2:3]) if packet else 6
         self.hops = BytesToData.bytes_to_int(packet[3:4]) if packet else 0
         self.transaction_id = BytesToData.bytes_to_hex(packet[4:8]) if packet else randrange(0x100000)

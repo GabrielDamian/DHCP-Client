@@ -1,13 +1,13 @@
 import time
 from tkinter import IntVar, StringVar, BooleanVar
 from tkinter import Tk, Button, Entry, Label, Text, Checkbutton, NORMAL, DISABLED, END
-from DHCP_Client.dhcp_packet import Packet
-from DHCP_Client.server_options import ServerOptions
-from DHCP_Client.message_type import MessageType
-from DHCP_Client.opcodes import Opcodes
+from DHCP.packet import Packet
+from DHCP.server_options import ServerOptions
+from DHCP.message_type import MessageType
+from DHCP.opcodes import Opcodes
 from select import select
 from threading import Thread
-from DHCP_Client import CLIENT_SOCKET, CLIENT_DESTINATIN_ADDR
+from Scripts import CLIENT_SOCKET, CLIENT_DESTINATIN_ADDR
 
 # initializare componente
 istoric_ipuri = []
