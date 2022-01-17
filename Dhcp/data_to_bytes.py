@@ -15,14 +15,14 @@ class DataToBytes:
         return data.to_bytes(length, 'big')
 
     @staticmethod
-    def mac_to_bytes(data: str, length: int = 6) -> bytes:
-        vec = [bytes.fromhex(x).lower() for x in data.split(":")]
-        final = b''
-        for e in vec:
-            final += e
-        return final + (length - final.__len__()) * b'\x00'
+    def mac_to_bytes(address: str, length: int = 6) -> bytes:
+        address_list = list(map(lambda byte: bytes.fromhex(byte), address.split(":")))
+        padding = b'\x00' * (length - len(address_list))
+        final = b''.join(address_list) + padding
+        return final + (length - len(final)) * b'\x00'
 
     @staticmethod
     def str_to_bytes(data: str, length: int) -> bytes:
         final = str.encode(data)
-        return final + (length - len(final)) * b'\x00'
+        padding = (length - len(final)) * b'\x00'
+        return final + padding

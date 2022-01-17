@@ -1,26 +1,26 @@
 from random import randrange
 
-from DHCP.bytes_to_data import BytesToData
-from DHCP.client_options import ClientOptions
-from DHCP.data_to_bytes import DataToBytes
-from DHCP.opcodes import Opcodes
-from DHCP.server_options import ServerOptions
+from Dhcp.bytes_to_data import BytesToData
+from Dhcp.client_options import ClientOptions
+from Dhcp.data_to_bytes import DataToBytes
+from Dhcp.opcodes import Opcodes
+from Dhcp.server_options import ServerOptions
 
 
 class Packet:
     def __init__(self, packet=None, requested_options: list = ()):
-        self.opcode = Opcodes(BytesToData.bytes_to_int(packet[0:1])) if packet else Opcodes.NONE
+        self.opcode = Opcodes(BytesToData.bytes_to_int(packet[0:1])) if packet else Opcodes.REQUEST
         self.hardware_type = BytesToData.bytes_to_int(packet[1:2]) if packet else 1
         self.hardware_address_length = BytesToData.bytes_to_int(packet[2:3]) if packet else 6
         self.hops = BytesToData.bytes_to_int(packet[3:4]) if packet else 0
-        self.transaction_id = BytesToData.bytes_to_hex(packet[4:8]) if packet else randrange(0x100000)
+        self.transaction_id = BytesToData.bytes_to_hex(packet[4:8]) if packet else randrange(1, 100000)
         self.seconds_elapsed = BytesToData.bytes_to_int(packet[8:10]) if packet else 0
-        self.boot_flags = BytesToData.bytes_to_int(packet[10:12]) if packet else 0
+        self.boot_flags = BytesToData.bytes_to_int(packet[10:12]) if packet else (8 << 12)
         self.client_ip_address = BytesToData.bytes_to_ip(packet[12:16]) if packet else '0.0.0.0'
         self.your_ip_address = BytesToData.bytes_to_ip(packet[16:20]) if packet else '0.0.0.0'
         self.server_ip_address = BytesToData.bytes_to_ip(packet[20:24]) if packet else '0.0.0.0'
         self.gateway_ip_address = BytesToData.bytes_to_ip(packet[24:28]) if packet else '0.0.0.0'
-        self.client_hardware_address = BytesToData.bytes_to_mac(packet[28:34]) if packet else '1A:2B:3C:3C:C4:EF'
+        self.client_hardware_address = BytesToData.bytes_to_mac(packet[28:34]) if packet else '9c:b7:0d:69:71:8d'
         self.server_name = BytesToData.bytes_to_str(packet[34:108]) if packet else ''
         self.boot_filename = BytesToData.bytes_to_str(packet[108:236]) if packet else ''
         self.magic_cookie = BytesToData.bytes_to_hex(packet[236:240]) if packet else int.from_bytes(b'\x63\x82\x53\x63',
@@ -45,7 +45,7 @@ class Packet:
 
         # initializare cu un packet
         if packet:
-            self.set_options_from_bytes(packet[240:])
+            self.set_options_from_bytes(packet)
 
     def overwrite_server_options(self, requested_options):
         if len(requested_options) > 0:
@@ -61,6 +61,7 @@ class Packet:
         return optiuni
 
     def set_options_from_bytes(self, packet: bytes):
+        packet = packet[240:]
         index = 0
         optiunu_dic = {}
         while index < len(packet) - 1:

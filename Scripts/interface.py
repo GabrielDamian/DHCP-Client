@@ -1,10 +1,10 @@
 import time
 from tkinter import IntVar, StringVar, BooleanVar
 from tkinter import Tk, Button, Entry, Label, Text, Checkbutton, NORMAL, DISABLED, END
-from DHCP.packet import Packet
-from DHCP.server_options import ServerOptions
-from DHCP.message_type import MessageType
-from DHCP.opcodes import Opcodes
+from Dhcp.packet import Packet
+from Dhcp.server_options import ServerOptions
+from Dhcp.message_type import MessageType
+from Dhcp.opcodes import Opcodes
 from select import select
 from threading import Thread
 from Scripts import CLIENT_SOCKET, CLIENT_DESTINATIN_ADDR
@@ -193,11 +193,11 @@ class Interface:
             coduri.append(ServerOptions(58))
 
         new_packet = Packet(packet=None, requested_options=coduri)
-        new_packet.host_name = self.host_name.get()
+        new_packet.host_name = self.host_name.get() if self.host_name.get() != 'None' else None
         new_packet.address_request = self.address_request.get() if self.address_request.get() != 'None' else None
-        new_packet.client_id = self.client_id.get() if self.client_id.get() != 'None' else '1'
-        new_packet.client_hardware_address = self.hardware_address.get()
-        new_packet.client_ip_address = self.client_ip_address.get()
+        new_packet.client_id = self.client_id.get() if self.client_id.get() != 'None' else None
+        new_packet.client_hardware_address = self.hardware_address.get() if self.hardware_address.get() != 'None' else None
+        new_packet.client_ip_address = self.client_ip_address.get() if self.client_ip_address.get() != 'None' else None
         return new_packet
 
     def append_to_logging(self, text: str):
@@ -224,7 +224,7 @@ class Interface:
         Clock.stop_all_clocks(self.clock_value)
         self.buton_connect["state"] = DISABLED
 
-        # construire packet DHCP Discover
+        # construire packet Dhcp Discover
         self.append_to_logging("Initializare packet...")
         packet = self.inputs_to_packet()
         packet.opcode = Opcodes.REQUEST

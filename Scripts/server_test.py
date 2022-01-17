@@ -1,7 +1,7 @@
 from random import randint, choice
-from DHCP.packet import Packet
-from DHCP.message_type import MessageType
-from DHCP.opcodes import Opcodes
+from Dhcp.packet import Packet
+from Dhcp.message_type import MessageType
+from Dhcp.opcodes import Opcodes
 from Scripts import SERVER_SOCKET, SERVER_BROADCAST_ADDR
 from typing import Optional
 
