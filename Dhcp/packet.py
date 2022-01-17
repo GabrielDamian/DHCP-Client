@@ -1,4 +1,5 @@
 from random import randrange
+from typing import Optional, List
 
 from Dhcp.bytes_to_data import BytesToData
 from Dhcp.client_options import ClientOptions
@@ -8,38 +9,42 @@ from Dhcp.server_options import ServerOptions
 
 
 class Packet:
-    def __init__(self, packet=None, requested_options: list = ()):
-        self.opcode = Opcodes(BytesToData.bytes_to_int(packet[0:1])) if packet else Opcodes.REQUEST
-        self.hardware_type = BytesToData.bytes_to_int(packet[1:2]) if packet else 1
-        self.hardware_address_length = BytesToData.bytes_to_int(packet[2:3]) if packet else 6
-        self.hops = BytesToData.bytes_to_int(packet[3:4]) if packet else 0
-        self.transaction_id = BytesToData.bytes_to_hex(packet[4:8]) if packet else randrange(1, 100000)
-        self.seconds_elapsed = BytesToData.bytes_to_int(packet[8:10]) if packet else 0
-        self.boot_flags = BytesToData.bytes_to_int(packet[10:12]) if packet else (8 << 12)
-        self.client_ip_address = BytesToData.bytes_to_ip(packet[12:16]) if packet else '0.0.0.0'
-        self.your_ip_address = BytesToData.bytes_to_ip(packet[16:20]) if packet else '0.0.0.0'
-        self.server_ip_address = BytesToData.bytes_to_ip(packet[20:24]) if packet else '0.0.0.0'
-        self.gateway_ip_address = BytesToData.bytes_to_ip(packet[24:28]) if packet else '0.0.0.0'
-        self.client_hardware_address = BytesToData.bytes_to_mac(packet[28:34]) if packet else '9c:b7:0d:69:71:8d'
-        self.server_name = BytesToData.bytes_to_str(packet[34:108]) if packet else ''
-        self.boot_filename = BytesToData.bytes_to_str(packet[108:236]) if packet else ''
-        self.magic_cookie = BytesToData.bytes_to_hex(packet[236:240]) if packet else int.from_bytes(b'\x63\x82\x53\x63',
-                                                                                                    byteorder='big')
-        self.host_name = None
-        self.address_request = None
-        self.dhcp_message_type = None
-        self.client_id = None
+    def __init__(self, packet=None, requested_options: List[ServerOptions] = (), host_name: Optional[str] = None,
+                 address_request: Optional[str] = None, dhcp_message_type: Optional[int] = None,
+                 client_id: Optional[str] = None, subnet_mask=None, router: Optional[str] = None,
+                 domain_server: Optional[str] = None, broadcast_address: Optional[str] = None,
+                 lease_time: Optional[int] = None, renewal_time: Optional[int] = None):
 
-        # optiuni server
-        self.subnet_mask = None
-        self.router = None
-        self.domain_server = None
-        self.broadcast_address = None
-        self.lease_time = None
-        self.renewal_time = None
+        self.opcode: Opcodes = Opcodes(BytesToData.bytes_to_int(packet[0:1])) if packet else Opcodes.REQUEST
+        self.hardware_type: int = BytesToData.bytes_to_int(packet[1:2]) if packet else 1
+        self.hardware_address_length: int = BytesToData.bytes_to_int(packet[2:3]) if packet else 6
+        self.hops: int = BytesToData.bytes_to_int(packet[3:4]) if packet else 0
+        self.transaction_id: int = BytesToData.bytes_to_hex(packet[4:8]) if packet else randrange(1, 100000)
+        self.seconds_elapsed: int = BytesToData.bytes_to_int(packet[8:10]) if packet else 0
+        self.boot_flags: int = BytesToData.bytes_to_int(packet[10:12]) if packet else (8 << 12)
+        self.client_ip_address: str = BytesToData.bytes_to_ip(packet[12:16]) if packet else '0.0.0.0'
+        self.your_ip_address: str = BytesToData.bytes_to_ip(packet[16:20]) if packet else '0.0.0.0'
+        self.server_ip_address: str = BytesToData.bytes_to_ip(packet[20:24]) if packet else '0.0.0.0'
+        self.gateway_ip_address: str = BytesToData.bytes_to_ip(packet[24:28]) if packet else '0.0.0.0'
+        self.client_hardware_address: str = BytesToData.bytes_to_mac(packet[28:34]) if packet else '9c:b7:0d:69:71:8d'
+        self.server_name: str = BytesToData.bytes_to_str(packet[34:108]) if packet else ''
+        self.boot_filename: str = BytesToData.bytes_to_str(packet[108:236]) if packet else ''
+        self.magic_cookie: int = BytesToData.bytes_to_hex(packet[236:240]) if packet else \
+            int.from_bytes(b'\x63\x82\x53\x63', byteorder='big')
 
-        # requested parameters
-        self.option55 = None
+        # options
+        self.option55: Optional[List[ServerOptions]] = requested_options if (len(requested_options) > 0) else None
+        self.host_name: Optional[str] = host_name
+        self.address_request: Optional[str] = address_request
+        self.dhcp_message_type: Optional[int] = dhcp_message_type
+        self.client_id: Optional[str] = client_id
+
+        self.subnet_mask: Optional[str] = subnet_mask
+        self.router: Optional[str] = router
+        self.domain_server: Optional[str] = domain_server
+        self.broadcast_address: Optional[str] = broadcast_address
+        self.lease_time: Optional[int] = lease_time
+        self.renewal_time: Optional[int] = renewal_time
 
         self.overwrite_server_options(requested_options)
 
@@ -55,59 +60,101 @@ class Packet:
                 self.option55 += DataToBytes.int_to_bytes(option.value)
 
     def get_server_options(self) -> list:
-        optiuni = []
+        options = []
         for byte in self.option55[2:]:
-            optiuni.append(int(byte))
-        return optiuni
+            options.append(int(byte))
+        return options
+
+    # def set_options_from_bytes(self, packet: bytes):
+    #     packet = packet[240:]
+    #     index = 0
+    #     optiunu_dic = {}
+    #     while index < len(packet) - 1:
+    #         option_code = packet[index]
+    #         option_size = packet[index + 1]
+    #         option_body = packet[index + 2:index + 2 + option_size]
+    #         op_55_arr = []
+    #         if option_code == 55:
+    #             for x in option_body:
+    #                 op_55_arr.append(x)
+    #
+    #         if option_code == 55:
+    #             optiunu_dic[55] = op_55_arr
+    #         else:
+    #             optiunu_dic[option_code] = option_body
+    #
+    #         index += 1 + 1 + option_size
+    #
+    #     for x in optiunu_dic:
+    #         if optiunu_dic[x] is not None:
+    #             if x == 55 and len(optiunu_dic[55]) > 0:
+    #                 self.option55 = DataToBytes.int_to_bytes(55) + DataToBytes.int_to_bytes(len(optiunu_dic[55]))
+    #                 for optiune in optiunu_dic[55]:
+    #                     self.option55 += DataToBytes.int_to_bytes(optiune)
+    #             if x == 1:
+    #                 self.subnet_mask = BytesToData.bytes_to_ip(optiunu_dic[x])
+    #             if x == 3:
+    #                 self.router = BytesToData.bytes_to_ip(optiunu_dic[x])
+    #             if x == 6:
+    #                 self.domain_server = BytesToData.bytes_to_str(optiunu_dic[x])
+    #             if x == 28:
+    #                 self.broadcast_address = BytesToData.bytes_to_ip(optiunu_dic[x])
+    #             if x == 51:
+    #                 self.lease_time = BytesToData.bytes_to_int(optiunu_dic[x])
+    #             if x == 58:
+    #                 self.renewal_time = BytesToData.bytes_to_int(optiunu_dic[x])
+    #             if x == 0:
+    #                 pass
+    #             if x == 12:
+    #                 self.host_name = BytesToData.bytes_to_str(optiunu_dic[x])
+    #             if x == 50:
+    #                 self.address_request = BytesToData.bytes_to_ip(optiunu_dic[x])
+    #             if x == 53:
+    #                 self.dhcp_message_type = BytesToData.bytes_to_int(optiunu_dic[x])
+    #             if x == 61:
+    #                 self.client_id = BytesToData.bytes_to_str(optiunu_dic[x])
 
     def set_options_from_bytes(self, packet: bytes):
         packet = packet[240:]
         index = 0
-        optiunu_dic = {}
-        while index < len(packet) - 1:
-            op_code = packet[index]
-            op_size = packet[index + 1]
-            op = packet[index + 2:index + 2 + op_size]
-            op_55_arr = []
-            if op_code == 55:
-                for x in op:
-                    op_55_arr.append(x)
+        options_dict = {}
 
-            if op_code == 55:
-                optiunu_dic[55] = op_55_arr
-            else:
-                optiunu_dic[op_code] = op
+        while True:
+            option_code = packet[index]
+            if option_code == 255:
+                break
+            option_size = packet[index + 1]
+            option_body = packet[index + 2:index + 2 + option_size]
+            options_dict[option_code] = option_body
 
-            index += 1 + 1 + op_size
+            index += 2 + option_size
 
-        for x in optiunu_dic:
-            if optiunu_dic[x] is not None:
-                if x == 55 and len(optiunu_dic[55]) > 0:
-                    self.option55 = DataToBytes.int_to_bytes(55) + DataToBytes.int_to_bytes(len(optiunu_dic[55]))
-                    for optiune in optiunu_dic[55]:
-                        self.option55 += DataToBytes.int_to_bytes(optiune)
+        index = index
+
+        for x in options_dict:
+            if options_dict[x] is not None:
                 if x == 1:
-                    self.subnet_mask = BytesToData.bytes_to_ip(optiunu_dic[x])
-                if x == 3:
-                    self.router = BytesToData.bytes_to_ip(optiunu_dic[x])
-                if x == 6:
-                    self.domain_server = BytesToData.bytes_to_str(optiunu_dic[x])
-                if x == 28:
-                    self.broadcast_address = BytesToData.bytes_to_ip(optiunu_dic[x])
-                if x == 51:
-                    self.lease_time = BytesToData.bytes_to_int(optiunu_dic[x])
-                if x == 58:
-                    self.renewal_time = BytesToData.bytes_to_int(optiunu_dic[x])
-                if x == 0:
+                    self.subnet_mask = BytesToData.bytes_to_ip(options_dict[x])
+                elif x == 3:
+                    self.router = BytesToData.bytes_to_ip(options_dict[x])
+                elif x == 6:
+                    self.domain_server = BytesToData.bytes_to_ip(options_dict[x])
+                elif x == 28:
+                    self.broadcast_address = BytesToData.bytes_to_ip(options_dict[x])
+                elif x == 51:
+                    self.lease_time = BytesToData.bytes_to_int(options_dict[x])
+                elif x == 58:
+                    self.renewal_time = BytesToData.bytes_to_int(options_dict[x])
+                elif x == 0:
                     pass
-                if x == 12:
-                    self.host_name = BytesToData.bytes_to_str(optiunu_dic[x])
-                if x == 50:
-                    self.address_request = BytesToData.bytes_to_ip(optiunu_dic[x])
-                if x == 53:
-                    self.dhcp_message_type = BytesToData.bytes_to_int(optiunu_dic[x])
-                if x == 61:
-                    self.client_id = BytesToData.bytes_to_str(optiunu_dic[x])
+                elif x == 12:
+                    self.host_name = BytesToData.bytes_to_str(options_dict[x])
+                elif x == 50:
+                    self.address_request = BytesToData.bytes_to_ip(options_dict[x])
+                elif x == 53:
+                    self.dhcp_message_type = BytesToData.bytes_to_int(options_dict[x])
+                elif x == 61:
+                    self.client_id = BytesToData.bytes_to_str(options_dict[x])
 
     def encode(self) -> bytes:
         packet_pregatit = b''
@@ -162,8 +209,8 @@ class Packet:
 
         if self.domain_server:
             packet_pregatit += DataToBytes.int_to_bytes(ServerOptions.DOMAIN_SERVER) + \
-                               DataToBytes.int_to_bytes(len(self.domain_server)) + \
-                               DataToBytes.str_to_bytes(self.domain_server, len(self.domain_server))
+                               DataToBytes.int_to_bytes(4) + \
+                               DataToBytes.ip_to_bytes(self.domain_server)
 
         if self.broadcast_address:
             packet_pregatit += DataToBytes.int_to_bytes(ServerOptions.BROADCAST_ADRESS) + \

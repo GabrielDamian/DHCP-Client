@@ -22,5 +22,7 @@ class BytesToData:
     def bytes_to_mac(data: bytes) -> str:
         rez = ''
         for x in data:
-            rez += str(hex(x)[2:]) + ":"
+            hexazecimal_value = str(hex(x)[2:])
+            padding = (2 - len(hexazecimal_value)) * '0'
+            rez += padding + hexazecimal_value + ":"
         return rez[:-1]
