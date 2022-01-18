@@ -49,7 +49,7 @@ class Interface:
         self.broadcast_address_option.set('...')
         self.lease_time_option.set('...')
         self.renewal_time_option.set('...')
-        self.ip_curent_value.set(0)
+        self.ip_curent_value.set("None")
         self.lease_time_value.set(0)
         self.renewal_time_value.set(0)
 
@@ -261,10 +261,12 @@ class Interface:
 
         self.set_fields_from_dhcpack(packet_ack=packet_ack)
         if packet_ack.get_renewal_time():
+            self.timer.cancel()
             self.timer = Timer(packet_ack.get_renewal_time(), self.reconnect)
             self.timer.start()
 
-    def disconnect(self): # not complete needs relese
+    def disconnect(self):
+        self.timer.cancel()
         packet_relese = self.last_packet_request
         packet_relese.dhcp_message_type = MessageType.RELEASE
         packet_relese.opcode = Opcodes.REQUEST
