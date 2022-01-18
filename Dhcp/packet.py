@@ -45,18 +45,8 @@ class Packet:
         self.lease_time: Optional[int] = None
         self.renewal_time: Optional[int] = None
 
-        self.overwrite_server_options(requested_options)
-
-        # initializare cu un packet
         if packet:
             self.set_options_from_bytes(packet)
-
-    def overwrite_server_options(self, requested_options):
-        if len(requested_options) > 0:
-            self.option55 = DataToBytes.int_to_bytes(55, 1)
-            self.option55 += DataToBytes.int_to_bytes(len(requested_options))
-            for option in requested_options:
-                self.option55 += DataToBytes.int_to_bytes(option.value)
 
     def get_server_options(self) -> list:
         options = []
@@ -65,16 +55,16 @@ class Packet:
         return options
 
     def set_options_from_bytes(self, packet: bytes):
-        packet = packet[240:]
+        options_section = packet[240:]
         index = 0
         options_dict = {}
 
         while True:
-            option_code = packet[index]
+            option_code = options_section[index]
             if option_code == 255:
                 break
-            option_size = packet[index + 1]
-            option_body = packet[index + 2:index + 2 + option_size]
+            option_size = options_section[index + 1]
+            option_body = options_section[index + 2:index + 2 + option_size]
             options_dict[option_code] = option_body
 
             index += 2 + option_size
@@ -122,8 +112,11 @@ class Packet:
         packet_pregatit += DataToBytes.str_to_bytes(self.boot_filename, 128)
         packet_pregatit += DataToBytes.hex_to_bytes(self.magic_cookie, 4)
 
-        if self.option55:
-            packet_pregatit += self.option55
+        if self.option55 and len(self.option55) > 0:
+            packet_pregatit += DataToBytes.int_to_bytes(55, 1)
+            packet_pregatit += DataToBytes.int_to_bytes(len(self.option55))
+            for option in self.option55:
+                packet_pregatit += DataToBytes.int_to_bytes(option.value)
 
         if self.host_name:
             packet_pregatit += DataToBytes.int_to_bytes(ClientOptions.HOST_NAME.value) + \
