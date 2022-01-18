@@ -6,14 +6,13 @@ from Dhcp.client_options import ClientOptions
 from Dhcp.data_to_bytes import DataToBytes
 from Dhcp.opcodes import Opcodes
 from Dhcp.server_options import ServerOptions
+from Dhcp.message_type import MessageType
 
 
 class Packet:
     def __init__(self, packet=None, requested_options: List[ServerOptions] = (), host_name: Optional[str] = None,
-                 address_request: Optional[str] = None, dhcp_message_type: Optional[int] = None,
-                 client_id: Optional[str] = None, subnet_mask=None, router: Optional[str] = None,
-                 domain_server: Optional[str] = None, broadcast_address: Optional[str] = None,
-                 lease_time: Optional[int] = None, renewal_time: Optional[int] = None):
+                 address_request: Optional[str] = None, dhcp_message_type: Optional[MessageType] = None,
+                 client_id: Optional[str] = None):
 
         self.opcode: Opcodes = Opcodes(BytesToData.bytes_to_int(packet[0:1])) if packet else Opcodes.REQUEST
         self.hardware_type: int = BytesToData.bytes_to_int(packet[1:2]) if packet else 1
@@ -36,15 +35,15 @@ class Packet:
         self.option55: Optional[List[ServerOptions]] = requested_options if (len(requested_options) > 0) else None
         self.host_name: Optional[str] = host_name
         self.address_request: Optional[str] = address_request
-        self.dhcp_message_type: Optional[int] = dhcp_message_type
+        self.dhcp_message_type: Optional[MessageType] = dhcp_message_type
         self.client_id: Optional[str] = client_id
 
-        self.subnet_mask: Optional[str] = subnet_mask
-        self.router: Optional[str] = router
-        self.domain_server: Optional[str] = domain_server
-        self.broadcast_address: Optional[str] = broadcast_address
-        self.lease_time: Optional[int] = lease_time
-        self.renewal_time: Optional[int] = renewal_time
+        self.subnet_mask: Optional[str] = None
+        self.router: Optional[str] = None
+        self.domain_server: Optional[str] = None
+        self.broadcast_address: Optional[str] = None
+        self.lease_time: Optional[int] = None
+        self.renewal_time: Optional[int] = None
 
         self.overwrite_server_options(requested_options)
 
@@ -65,55 +64,6 @@ class Packet:
             options.append(int(byte))
         return options
 
-    # def set_options_from_bytes(self, packet: bytes):
-    #     packet = packet[240:]
-    #     index = 0
-    #     optiunu_dic = {}
-    #     while index < len(packet) - 1:
-    #         option_code = packet[index]
-    #         option_size = packet[index + 1]
-    #         option_body = packet[index + 2:index + 2 + option_size]
-    #         op_55_arr = []
-    #         if option_code == 55:
-    #             for x in option_body:
-    #                 op_55_arr.append(x)
-    #
-    #         if option_code == 55:
-    #             optiunu_dic[55] = op_55_arr
-    #         else:
-    #             optiunu_dic[option_code] = option_body
-    #
-    #         index += 1 + 1 + option_size
-    #
-    #     for x in optiunu_dic:
-    #         if optiunu_dic[x] is not None:
-    #             if x == 55 and len(optiunu_dic[55]) > 0:
-    #                 self.option55 = DataToBytes.int_to_bytes(55) + DataToBytes.int_to_bytes(len(optiunu_dic[55]))
-    #                 for optiune in optiunu_dic[55]:
-    #                     self.option55 += DataToBytes.int_to_bytes(optiune)
-    #             if x == 1:
-    #                 self.subnet_mask = BytesToData.bytes_to_ip(optiunu_dic[x])
-    #             if x == 3:
-    #                 self.router = BytesToData.bytes_to_ip(optiunu_dic[x])
-    #             if x == 6:
-    #                 self.domain_server = BytesToData.bytes_to_str(optiunu_dic[x])
-    #             if x == 28:
-    #                 self.broadcast_address = BytesToData.bytes_to_ip(optiunu_dic[x])
-    #             if x == 51:
-    #                 self.lease_time = BytesToData.bytes_to_int(optiunu_dic[x])
-    #             if x == 58:
-    #                 self.renewal_time = BytesToData.bytes_to_int(optiunu_dic[x])
-    #             if x == 0:
-    #                 pass
-    #             if x == 12:
-    #                 self.host_name = BytesToData.bytes_to_str(optiunu_dic[x])
-    #             if x == 50:
-    #                 self.address_request = BytesToData.bytes_to_ip(optiunu_dic[x])
-    #             if x == 53:
-    #                 self.dhcp_message_type = BytesToData.bytes_to_int(optiunu_dic[x])
-    #             if x == 61:
-    #                 self.client_id = BytesToData.bytes_to_str(optiunu_dic[x])
-
     def set_options_from_bytes(self, packet: bytes):
         packet = packet[240:]
         index = 0
@@ -128,8 +78,6 @@ class Packet:
             options_dict[option_code] = option_body
 
             index += 2 + option_size
-
-        index = index
 
         for x in options_dict:
             if options_dict[x] is not None:
@@ -229,6 +177,15 @@ class Packet:
 
         packet_pregatit += DataToBytes.int_to_bytes(255, 1)
         return packet_pregatit
+
+    def offer_to_request(self):
+        if self.opcode == Opcodes.REPLY and self.dhcp_message_type == MessageType.OFFER:
+            self.opcode = Opcodes.REQUEST
+            self.dhcp_message_type = MessageType.REQUEST
+            self.address_request = self.your_ip_address
+            self.your_ip_address = '0.0.0.0'
+        else:
+            print("The packet is not offer type")
 
     def __str__(self):
         return f"""

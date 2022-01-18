@@ -1,49 +1,12 @@
-import time
 from tkinter import IntVar, StringVar, BooleanVar
 from tkinter import Tk, Button, Entry, Label, Text, Checkbutton, NORMAL, DISABLED, END
 from Dhcp.packet import Packet
 from Dhcp.server_options import ServerOptions
 from Dhcp.message_type import MessageType
 from Dhcp.opcodes import Opcodes
-from select import select
 from threading import Thread
 from Scripts import CLIENT_SOCKET, CLIENT_DESTINATIN_ADDR
-
-# initializare componente
-istoric_ipuri = []
-current_ip = None
-
-
-class Clock(Thread):
-    all_clocks = []
-
-    @staticmethod
-    def stop_all_clocks(clock_variable):
-        for clock in Clock.all_clocks:
-            clock.stop()
-            Clock.all_clocks.remove(clock)
-
-        time.sleep(1)
-        clock_variable.set(0)
-
-    def __init__(self, time_variable: IntVar, action ):
-        Thread.__init__(self)
-        self.action = action
-        self.time_variable = time_variable
-        self.stop_flag = False
-
-    def run(self):
-        self.stop_flag = False
-        Clock.all_clocks.append(self)
-        while not self.stop_flag and self.time_variable.get() > 0:
-            time.sleep(1)
-            self.time_variable.set(self.time_variable.get() - 1)
-
-        if self.time_variable.get() <= 0 and (not self.stop_flag):
-            self.action()
-
-    def stop(self):
-        self.stop_flag = True
+from Dhcp_receivers import offer_receiver, ack_receiver
 
 
 class Interface:
@@ -221,162 +184,144 @@ class Interface:
         self.renewal_time.set(True)
 
     def connect(self):
-        Clock.stop_all_clocks(self.clock_value)
         self.buton_connect["state"] = DISABLED
 
-        # construire packet Dhcp Discover
-        self.append_to_logging("Initializare packet...")
+        self.append_to_logging("Initializing DHCPDiscover...")
         packet = self.inputs_to_packet()
         packet.opcode = Opcodes.REQUEST
         packet.dhcp_message_type = MessageType.DISCOVER
-
         packet_bytes = packet.encode()
-        self.append_to_logging("Packet initializat...")
 
-        # trimitere DISCOVER
-        self.append_to_logging("Trimitere DHCPDiscover...")
+        self.append_to_logging("Sending DHCPDiscover...")
         CLIENT_SOCKET.sendto(packet_bytes, CLIENT_DESTINATIN_ADDR)
 
-        # primire mesaj OFFER
-        self.append_to_logging("Asteptare DHCPOffer...")
-        putem_citi, _, _ = select([CLIENT_SOCKET], [], [], 5)
-        packet_2 = None
-        if putem_citi:
-            bytes_offer = CLIENT_SOCKET.recv(1024)
-            packet_2 = Packet(bytes_offer)
-        else:
+        self.append_to_logging("Waiting for DHCPOffer...")
+        packet_2 = offer_receiver(CLIENT_SOCKET)
+        if packet_2 is None:
             self.buton_connect["state"] = NORMAL
-            self.append_to_logging("\nNu am primit raspuns de la server")
+            self.append_to_logging("\nNo response from the server.")
 
-        # verificare si trimitere request
         if packet_2 and packet_2.dhcp_message_type == MessageType.OFFER:
-            self.append_to_logging("Packet DHCPOffer primit...")
-            packet_2.opcode = Opcodes.REQUEST
-            packet_2.dhcp_message_type = MessageType.REQUEST
-            CLIENT_SOCKET.sendto(packet_2.encode(), CLIENT_DESTINATIN_ADDR)
-            self.append_to_logging("Trimitere DHCPRequest...")
+            self.append_to_logging("DHCPOffer received...")
+            packet_2.offer_to_request()
 
-            # asteptare packet ack
-            putem_citi, _, _ = select([CLIENT_SOCKET], [], [], 5)
-            packet_ack = Packet(CLIENT_SOCKET.recv(1024)) if putem_citi else None
+            self.append_to_logging("Sending DHCPRequest...")
+            CLIENT_SOCKET.sendto(packet_2.encode(), CLIENT_DESTINATIN_ADDR)
+
+            self.append_to_logging("Waiting for DHCPack...")
+            packet_ack = ack_receiver(CLIENT_SOCKET)
+            if packet_ack is None:
+                self.buton_connect["state"] = NORMAL
+                self.append_to_logging("\nNo response from the server.")
 
             # afisare rezultate
             if packet_ack and packet_ack.dhcp_message_type == MessageType.ACK:
-                self.append_to_logging("Packet DHCPAck")
+                self.append_to_logging("DHCPAck received...")
 
-                self.clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
+                self.clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10) ###
                 self.append_to_logging(str(packet_ack))
 
-                self.lease_time_value.set(packet_ack.lease_time)
-                self.renewal_time_value.set(packet_ack.renewal_time)
-
-                if packet_ack.your_ip_address not in istoric_ipuri:
-                    self.text_istoric_ips.config(state='normal')
-                    self.text_istoric_ips.insert(END, f" {packet_ack.your_ip_address}\n")
-                    self.text_istoric_ips.config(state='disabled')
+                self.lease_time_value.set(packet_ack.lease_time) ##
+                self.renewal_time_value.set(packet_ack.renewal_time) ##
 
                 self.subnet_mask_option.set(packet_ack.subnet_mask)
                 self.router_option.set(packet_ack.router)
                 self.domain_server_option.set(packet_ack.domain_server)
                 self.broadcast_address_option.set(packet_ack.broadcast_address)
-                self.lease_time_option.set(packet_ack.lease_time)
-                self.renewal_time_option.set(packet_ack.renewal_time)
+                self.lease_time_option.set(str(packet_ack.lease_time))
+                self.renewal_time_option.set(str(packet_ack.renewal_time))
 
                 self.ip_curent_value.set(packet_ack.your_ip_address)
-                if packet_ack.your_ip_address not in istoric_ipuri:
-                    istoric_ipuri.append(packet_ack.your_ip_address)
 
-                # setare si pornire clock
-                Clock(self.clock_value, self.reconnect).start()
+
                 self.buton_connect["state"] = NORMAL
 
-    def reconnect(self):
-        self.buton_connect["state"] = DISABLED
+    # def reconnect(self):
+    #     self.buton_connect["state"] = DISABLED
+    #
+    #     Clock.stop_all_clocks(self.clock_value)
+    #
+    #     packet_request = self.inputs_to_packet()
+    #     packet_request.opcode = Opcodes.REQUEST
+    #     packet_request.dhcp_message_type = MessageType.REQUEST
+    #
+    #     for ip in istoric_ipuri:  # lista nu o sa fie niciodata goala la apelarea functiei reconnect
+    #         self.append_to_logging(f"Incercare connectare cu {ip}...")
+    #         # creare packet req
+    #         packet_request.address_request = ip
+    #         CLIENT_SOCKET.sendto(packet_request.encode(), CLIENT_DESTINATIN_ADDR)
+    #         putem_citi, _, _ = select([CLIENT_SOCKET], [], [], 4)
+    #         packet_ack = Packet(CLIENT_SOCKET.recv(1024)) if putem_citi else None
+    #         if packet_ack is None:
+    #             self.append_to_logging(f"Nu s-a reusit reconnectarea cu {ip}")
+    #             continue
+    #         else:
+    #             # reusit conectare cu ip vechi
+    #             self.clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
+    #             current_ip = packet_ack.your_ip_address
+    #
+    #             self.lease_time_value.set(packet_ack.lease_time)
+    #             self.renewal_time_value.set(packet_ack.renewal_time)
+    #
+    #             if packet_ack.your_ip_address not in istoric_ipuri:
+    #                 self.text_istoric_ips.config(state='normal')
+    #                 self.text_istoric_ips.insert(END, f" {packet_ack.your_ip_address}\n")
+    #                 self.text_istoric_ips.config(state='disabled')
+    #
+    #             self.subnet_mask_option.set(packet_ack.subnet_mask)
+    #             self.router_option.set(packet_ack.router)
+    #             self.domain_server_option.set(packet_ack.domain_server)
+    #             self.broadcast_address_option.set(packet_ack.broadcast_address)
+    #             self.lease_time_option.set(packet_ack.lease_time)
+    #             self.renewal_time_option.set(packet_ack.renewal_time)
+    #
+    #             self.ip_curent_value.set(packet_ack.your_ip_address)
+    #             if packet_ack.your_ip_address not in istoric_ipuri:
+    #                 istoric_ipuri.append(packet_ack.your_ip_address)
+    #
+    #             Clock(self.clock_value, self.reconnect).start()
+    #             self.buton_connect["state"] = NORMAL
+    #             self.append_to_logging(f"Reusire reconectare cu ip {current_ip}")
+    #             return
+    #
+    #     # nu s-a reusit conectarea cu un ip mai vechi
+    #     packet_request.address_request = '0.0.0.0'
+    #     CLIENT_SOCKET.sendto(packet_request.encode(), CLIENT_DESTINATIN_ADDR)
+    #     putem_citi, _, _ = select([CLIENT_SOCKET], [], [], 2)
+    #     packet_ack = Packet(CLIENT_SOCKET.recv(1024)) if putem_citi else None
+    #     if packet_ack is None:
+    #         Clock.stop_all_clocks(self.clock_value)
+    #         time.sleep(1)
+    #         self.append_to_logging("Nu s-a putut reface conexiunea cu nici un server")
+    #     else:
+    #         current_ip = packet_ack.your_ip_address
+    #         self.clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
+    #
+    #         self.lease_time_value.set(packet_ack.lease_time)
+    #         self.renewal_time_value.set(packet_ack.renewal_time)
+    #
+    #         if packet_ack.your_ip_address not in istoric_ipuri:
+    #             self.text_istoric_ips.config(state='normal')
+    #             self.text_istoric_ips.insert(END, f" {packet_ack.your_ip_address}\n")
+    #             self.text_istoric_ips.config(state='disabled')
+    #
+    #         self.subnet_mask_option.set(packet_ack.subnet_mask)
+    #         self.router_option.set(packet_ack.router)
+    #         self.domain_server_option.set(packet_ack.domain_server)
+    #         self.broadcast_address_option.set(packet_ack.broadcast_address)
+    #         self.lease_time_option.set(packet_ack.lease_time)
+    #         self.renewal_time_option.set(packet_ack.renewal_time)
+    #
+    #         self.ip_curent_value.set(packet_ack.your_ip_address)
+    #         if current_ip not in istoric_ipuri:
+    #             istoric_ipuri.append(current_ip)
+    #
+    #         self.append_to_logging(f"Reusire reconectare cu ip {current_ip}")
+    #
+    #         self.buton_connect["state"] = NORMAL
+    #         Clock(self.clock_value, self.reconnect).start()
 
-        Clock.stop_all_clocks(self.clock_value)
-
-        packet_request = self.inputs_to_packet()
-        packet_request.opcode = Opcodes.REQUEST
-        packet_request.dhcp_message_type = MessageType.REQUEST
-
-        for ip in istoric_ipuri:  # lista nu o sa fie niciodata goala la apelarea functiei reconnect
-            self.append_to_logging(f"Incercare connectare cu {ip}...")
-            # creare packet req
-            packet_request.address_request = ip
-            CLIENT_SOCKET.sendto(packet_request.encode(), CLIENT_DESTINATIN_ADDR)
-            putem_citi, _, _ = select([CLIENT_SOCKET], [], [], 4)
-            packet_ack = Packet(CLIENT_SOCKET.recv(1024)) if putem_citi else None
-            if packet_ack is None:
-                self.append_to_logging(f"Nu s-a reusit reconnectarea cu {ip}")
-                continue
-            else:
-                # reusit conectare cu ip vechi
-                self.clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
-                current_ip = packet_ack.your_ip_address
-
-                self.lease_time_value.set(packet_ack.lease_time)
-                self.renewal_time_value.set(packet_ack.renewal_time)
-
-                if packet_ack.your_ip_address not in istoric_ipuri:
-                    self.text_istoric_ips.config(state='normal')
-                    self.text_istoric_ips.insert(END, f" {packet_ack.your_ip_address}\n")
-                    self.text_istoric_ips.config(state='disabled')
-
-                self.subnet_mask_option.set(packet_ack.subnet_mask)
-                self.router_option.set(packet_ack.router)
-                self.domain_server_option.set(packet_ack.domain_server)
-                self.broadcast_address_option.set(packet_ack.broadcast_address)
-                self.lease_time_option.set(packet_ack.lease_time)
-                self.renewal_time_option.set(packet_ack.renewal_time)
-
-                self.ip_curent_value.set(packet_ack.your_ip_address)
-                if packet_ack.your_ip_address not in istoric_ipuri:
-                    istoric_ipuri.append(packet_ack.your_ip_address)
-
-                Clock(self.clock_value, self.reconnect).start()
-                self.buton_connect["state"] = NORMAL
-                self.append_to_logging(f"Reusire reconectare cu ip {current_ip}")
-                return
-
-        # nu s-a reusit conectarea cu un ip mai vechi
-        packet_request.address_request = '0.0.0.0'
-        CLIENT_SOCKET.sendto(packet_request.encode(), CLIENT_DESTINATIN_ADDR)
-        putem_citi, _, _ = select([CLIENT_SOCKET], [], [], 2)
-        packet_ack = Packet(CLIENT_SOCKET.recv(1024)) if putem_citi else None
-        if packet_ack is None:
-            Clock.stop_all_clocks(self.clock_value)
-            time.sleep(1)
-            self.append_to_logging("Nu s-a putut reface conexiunea cu nici un server")
-        else:
-            current_ip = packet_ack.your_ip_address
-            self.clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else 10)
-
-            self.lease_time_value.set(packet_ack.lease_time)
-            self.renewal_time_value.set(packet_ack.renewal_time)
-
-            if packet_ack.your_ip_address not in istoric_ipuri:
-                self.text_istoric_ips.config(state='normal')
-                self.text_istoric_ips.insert(END, f" {packet_ack.your_ip_address}\n")
-                self.text_istoric_ips.config(state='disabled')
-
-            self.subnet_mask_option.set(packet_ack.subnet_mask)
-            self.router_option.set(packet_ack.router)
-            self.domain_server_option.set(packet_ack.domain_server)
-            self.broadcast_address_option.set(packet_ack.broadcast_address)
-            self.lease_time_option.set(packet_ack.lease_time)
-            self.renewal_time_option.set(packet_ack.renewal_time)
-
-            self.ip_curent_value.set(packet_ack.your_ip_address)
-            if current_ip not in istoric_ipuri:
-                istoric_ipuri.append(current_ip)
-
-            self.append_to_logging(f"Reusire reconectare cu ip {current_ip}")
-
-            self.buton_connect["state"] = NORMAL
-            Clock(self.clock_value, self.reconnect).start()
-
-    def disconnect(self):
-        Clock.stop_all_clocks(self.clock_value)
+    def disconnect(self): # not complete needs relese
         self.append_to_logging("Resurse eliberate.")
         self.buton_connect["state"] = NORMAL
 
