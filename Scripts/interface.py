@@ -1,4 +1,4 @@
-from tkinter import IntVar, StringVar, BooleanVar
+from tkinter import IntVar, StringVar, BooleanVar, Variable
 from tkinter import Tk, Button, Entry, Label, Text, Checkbutton, NORMAL, DISABLED, END
 from Dhcp.packet import Packet
 from Dhcp.server_options import ServerOptions
@@ -8,7 +8,7 @@ import threading
 from Scripts import CLIENT_SOCKET, CLIENT_DESTINATIN_ADDR
 from Dhcp.receivers import offer_receiver, ack_receiver
 from Tools.timer import Timer
-from typing import Optional
+from typing import Optional, Callable, Literal
 from datetime import datetime, timedelta
 
 
@@ -144,6 +144,47 @@ class Interface:
 
         self.text_logging.place(x=400, y=70)
         self.text_istoric_ips.place(x=400, y=630)
+
+    def create_button(self, text: str, command: Callable, x_position: int, y_position: int) -> Button:
+        button = Button(self.window, text=text, command=command)
+        button.place(x=x_position, y=y_position)
+        return button
+
+    def create_entry(self, variable_type: Callable, x_position: int, y_position: int, width: int,
+                     height: int, font: tuple = ('calibre', 10, 'normal')) -> (Entry, Variable):
+        variable = variable_type()
+        entry = Entry(self.window, textvariable=variable, font=font)
+        entry.place(x=x_position, y=y_position, width=width, height=height)
+        return entry, variable
+
+    def create_label(self, x_pos: int, y_pos: int, text: str = None, variable_type=None) -> (Entry, Optional[Variable]):
+        label: Label
+        if variable_type:
+            variable = variable_type()
+            label = Label(self.window, textvariable=variable)
+            label.place(x=x_pos, y=y_pos)
+            return label, variable
+        elif text:
+            label = Label(self.window, text=text)
+            label.place(x=x_pos, y=y_pos)
+            return label
+
+    def create_text(self, height: int, width: int, x_pos: int, y_pos: int, with_state: bool = False) -> (Text, Optional[str]):
+        if with_state:
+            state = "normal"
+            text = Text(self.window, height=height, width=width, state=state)
+            text.place(x=x_pos, y=y_pos)
+            return text, state
+        else:
+            text = Text(self.window, height=height, width=width)
+            text.place(x=x_pos, y=y_pos)
+            return text
+
+    def create_checkbutton(self, text: str, x_pos: int, y_pos: int) -> (Checkbutton, BooleanVar):
+        variable = BooleanVar()
+        checkbutton = Checkbutton(self.window, text=text, variable=variable, onvalue=1, offvalue=0)
+        checkbutton.place(x=x_pos, y=y_pos)
+        return Checkbutton, variable
 
     def inputs_to_packet(self):
         coduri = []
