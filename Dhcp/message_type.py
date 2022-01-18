@@ -8,4 +8,5 @@ class MessageType(IntEnum):
     REQUEST = 3
     DECLINE = 4
     ACK = 5
-    RELEASE = 6
+    NACK = 6
+    RELEASE = 7

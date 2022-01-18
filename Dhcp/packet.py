@@ -171,7 +171,7 @@ class Packet:
         packet_pregatit += DataToBytes.int_to_bytes(255, 1)
         return packet_pregatit
 
-    def offer_to_request(self):
+    def make_request(self):
         if self.opcode == Opcodes.REPLY and self.dhcp_message_type == MessageType.OFFER:
             self.opcode = Opcodes.REQUEST
             self.dhcp_message_type = MessageType.REQUEST
@@ -179,6 +179,9 @@ class Packet:
             self.your_ip_address = '0.0.0.0'
         else:
             print("The packet is not offer type")
+
+    def get_renewal_time(self) -> Optional[int]:
+        return self.renewal_time if self.renewal_time else self.lease_time//2 if self.lease_time else None
 
     def __str__(self):
         return f"""

@@ -9,11 +9,13 @@ from Scripts import CLIENT_SOCKET, CLIENT_DESTINATIN_ADDR
 from Dhcp.receivers import offer_receiver, ack_receiver
 from Tools.timer import Timer
 from typing import Optional
+from datetime import datetime, timedelta
 
 
 class Interface:
     def __init__(self):
         self.timer: Optional[Timer] = None
+        self.last_packet_request: Optional[Packet] = None
         self.window = Tk()
         self.window.geometry("830x720")
 
@@ -38,7 +40,7 @@ class Interface:
         self.logging_data = StringVar()
         self.lease_time_value = IntVar()
         self.renewal_time_value = IntVar()
-        self.clock_value = IntVar()
+        self.clock_value = StringVar()
         self.ip_curent_value = StringVar()
 
         self.subnet_mask_option.set('...')
@@ -85,7 +87,7 @@ class Interface:
         self.label_renewal_time_value = Label(self.window, textvariable=self.renewal_time_value)
         self.label_renewal_time = Label(self.window, text="Renewal time:")
         self.label_clock = Label(self.window, textvariable=self.clock_value)
-        self.label_timp_ramas = Label(self.window, text="Timp ramas (din renewal_time):")
+        self.label_renew_date = Label(self.window, text="Renew date: ")
         self.label_istoric_ips = Label(self.window, text="Istoric ip-uri:")
         self.label_ip_curent = Label(text="Ip curent:")
         self.label_ip_curent_value = Label(self.window, textvariable=self.ip_curent_value)
@@ -129,7 +131,7 @@ class Interface:
         self.label_renewal_time_value.place(x=106, y=631)
         self.label_renewal_time.place(x=20, y=630)
         self.label_clock.place(x=197, y=661)
-        self.label_timp_ramas.place(x=20, y=660)
+        self.label_renew_date.place(x=20, y=660)
         self.label_ip_curent.place(x=400, y=690)
         self.label_ip_curent_value.place(x=453, y=690)
         self.label_istoric_ips.place(x=400, y=600)
@@ -172,6 +174,27 @@ class Interface:
         self.text_logging.insert(END, f" {text}\n")
         self.text_logging.config(state='disabled')
 
+    def no_response_from_server(self):
+        self.buton_connect["state"] = NORMAL
+        self.append_to_logging("\nNo response from the server.")
+
+    def set_fields_from_dhcpack(self, packet_ack: Packet):
+        next_request_datetime = datetime.now() + \
+                                timedelta(seconds=packet_ack.renewal_time if packet_ack.renewal_time else
+                                packet_ack.lease_time // 2 if packet_ack.lease_time else "None")
+
+        self.clock_value.set(f"{next_request_datetime}")
+        self.lease_time_value.set(packet_ack.lease_time if packet_ack.lease_time else "None")
+        self.renewal_time_value.set(packet_ack.renewal_time if packet_ack.renewal_time else "None")
+
+        self.subnet_mask_option.set(packet_ack.subnet_mask if packet_ack.subnet_mask else "None")
+        self.router_option.set(packet_ack.router if packet_ack.router else "None")
+        self.domain_server_option.set(packet_ack.domain_server if packet_ack.domain_server else "None")
+        self.broadcast_address_option.set(packet_ack.broadcast_address if packet_ack.broadcast_address else "None")
+        self.lease_time_option.set(str(packet_ack.lease_time) if packet_ack.lease_time else "None")
+        self.renewal_time_option.set(str(packet_ack.renewal_time) if packet_ack.renewal_time else "None")
+        self.ip_curent_value.set(packet_ack.your_ip_address)
+
     def generate_default(self):
         packet = Packet()
 
@@ -202,48 +225,50 @@ class Interface:
         self.append_to_logging("Waiting for DHCPOffer...")
         packet_offer = offer_receiver(CLIENT_SOCKET)
         if packet_offer is None:
-            self.buton_connect["state"] = NORMAL
-            self.append_to_logging("\nNo response from the server.")
+            self.no_response_from_server()
             return
 
         self.append_to_logging("DHCPOffer received...")
-        offered_ip = packet_offer.your_ip_address
-        packet_offer.offer_to_request()
+        packet_offer.make_request()
+        self.last_packet_request = packet_offer
 
         self.append_to_logging("Sending DHCPRequest...")
-        CLIENT_SOCKET.sendto(packet_offer.encode(), CLIENT_DESTINATIN_ADDR)
+        CLIENT_SOCKET.sendto(self.last_packet_request.encode(), CLIENT_DESTINATIN_ADDR)
 
         self.append_to_logging("Waiting for DHCPack...")
         packet_ack = ack_receiver(CLIENT_SOCKET)
         if packet_ack is None:
-            self.buton_connect["state"] = NORMAL
-            self.append_to_logging("\nNo response from the server.")
+            self.no_response_from_server()
             return
 
         self.append_to_logging("DHCPAck received...")
         self.append_to_logging(str(packet_ack))
 
-        self.clock_value.set(packet_ack.renewal_time if packet_ack.renewal_time else
-                             int(packet_ack.lease_time / 2) if packet_ack.lease_time else None)
-        self.lease_time_value.set(packet_ack.lease_time if packet_ack.lease_time else "None")
-        self.renewal_time_value.set(packet_ack.renewal_time if packet_ack.renewal_time else "None")
+        self.set_fields_from_dhcpack(packet_ack=packet_ack)
 
-        self.subnet_mask_option.set(packet_ack.subnet_mask if packet_ack.subnet_mask else "None")
-        self.router_option.set(packet_ack.router if packet_ack.router else "None")
-        self.domain_server_option.set(packet_ack.domain_server if packet_ack.domain_server else "None")
-        self.broadcast_address_option.set(packet_ack.broadcast_address if packet_ack.broadcast_address else "None")
-        self.lease_time_option.set(str(packet_ack.lease_time) if packet_ack.lease_time else "None")
-        self.renewal_time_option.set(str(packet_ack.renewal_time) if packet_ack.renewal_time else "None")
-        self.ip_curent_value.set(offered_ip)
-
-        if self.renewal_time:
-            self.timer = Timer(packet_ack.renewal_time, self.reconnect)
+        if packet_ack.get_renewal_time():
+            self.timer = Timer(packet_ack.get_renewal_time(), self.reconnect)
             self.timer.start()
 
     def reconnect(self):
-        pass
+        self.append_to_logging("Sending DHCPRequest for renewal...")
+        CLIENT_SOCKET.sendto(self.last_packet_request.encode(), CLIENT_DESTINATIN_ADDR)
+
+        packet_ack = ack_receiver(CLIENT_SOCKET)
+        if packet_ack is None:
+            self.no_response_from_server()
+            return
+
+        self.set_fields_from_dhcpack(packet_ack=packet_ack)
+        if packet_ack.get_renewal_time():
+            self.timer = Timer(packet_ack.get_renewal_time(), self.reconnect)
+            self.timer.start()
 
     def disconnect(self): # not complete needs relese
+        packet_relese = self.last_packet_request
+        packet_relese.dhcp_message_type = MessageType.RELEASE
+        packet_relese.opcode = Opcodes.REQUEST
+        CLIENT_SOCKET.sendto(packet_relese.encode(), CLIENT_DESTINATIN_ADDR)
         self.append_to_logging("Resurse eliberate.")
         self.buton_connect["state"] = NORMAL
 
