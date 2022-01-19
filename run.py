@@ -1,5 +1,5 @@
 from subprocess import Popen
-from Scripts import interface, server_test
+from Scripts import interface
 from sys import executable
 from time import sleep
 

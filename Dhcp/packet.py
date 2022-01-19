@@ -1,6 +1,6 @@
+from __future__ import annotations
 from random import randrange
 from typing import Optional, List
-
 from Dhcp.bytes_to_data import BytesToData
 from Dhcp.client_options import ClientOptions
 from Dhcp.data_to_bytes import DataToBytes
@@ -48,12 +48,6 @@ class Packet:
         if packet:
             self.set_options_from_bytes(packet)
 
-    def get_server_options(self) -> list:
-        options = []
-        for byte in self.option55[2:]:
-            options.append(int(byte))
-        return options
-
     def set_options_from_bytes(self, packet: bytes):
         options_section = packet[240:]
         index = 0
@@ -66,7 +60,6 @@ class Packet:
             option_size = options_section[index + 1]
             option_body = options_section[index + 2:index + 2 + option_size]
             options_dict[option_code] = option_body
-
             index += 2 + option_size
 
         for x in options_dict:
@@ -171,14 +164,16 @@ class Packet:
         packet_pregatit += DataToBytes.int_to_bytes(255, 1)
         return packet_pregatit
 
-    def make_request(self):
-        if self.opcode == Opcodes.REPLY and self.dhcp_message_type == MessageType.OFFER:
-            self.opcode = Opcodes.REQUEST
-            self.dhcp_message_type = MessageType.REQUEST
-            self.address_request = self.your_ip_address
-            self.your_ip_address = '0.0.0.0'
+    @staticmethod
+    def make_request_packet(offer_packet: Packet) -> Optional[Packet]:
+        if offer_packet.opcode == Opcodes.REPLY and offer_packet.dhcp_message_type == MessageType.OFFER:
+            offer_packet.opcode = Opcodes.REQUEST
+            offer_packet.dhcp_message_type = MessageType.REQUEST
+            offer_packet.address_request = offer_packet.your_ip_address
+            offer_packet.your_ip_address = '0.0.0.0'
+            return offer_packet
         else:
-            print("The packet is not offer type")
+            return None
 
     def get_renewal_time(self) -> Optional[int]:
         return self.renewal_time if self.renewal_time else self.lease_time//2 if self.lease_time else None
