@@ -16,6 +16,7 @@ class Interface:
     def __init__(self):
         self._timer: Optional[Timer] = None
         self.__last_request_packet: Optional[Packet] = None
+        self.__ip_history_list = []
         self.__window = Tk()
         self.__window.geometry("830x720")
 
@@ -49,11 +50,11 @@ class Interface:
         self.__renewal_time_label, self.__renewal_time_value = self.__create_label(150, 480, variable_type=StringVar)
         self.__logging_label = self.__create_label(400, 46, text="Logging")
         self.__separator_footer_label = self.__create_label(20, 570, text="_" * 122)
-        self.__next_request_datetime_label, self.__next_request_datetime_value = self.__create_label(197, 661, variable_type=StringVar)
-        self.__renew_date_label = self.__create_label(20, 660, text="Renew date")
-        self.__current_ip_label = self.__create_label(400, 690, text="IP curent")
-        self.__current_ip_value_label, self.ip_curent_value = self.__create_label(453, 690, variable_type=StringVar)
-        self.ip_history_label = self.__create_label(400, 600, text="Istoric IP-uri")
+        self.__next_request_datetime_value_label, self.__next_request_datetime_value = self.__create_label(150, 650, variable_type=StringVar)
+        self.__renew_time_label = self.__create_label(20, 650, text="Renew date")
+        self.__current_ip_label = self.__create_label(400, 690, text="Current IP")
+        self.__current_ip_value_label, self.__current_ip_value = self.__create_label(453, 690, variable_type=StringVar)
+        self.__ip_history_label = self.__create_label(400, 600, text="Ip history")
 
         self.__host_name_input, self.__host_name_value = self.__create_entry(x_position=150, y_position=70, width=180, height=20)
         self.__address_request_input, self.__address_request_value = self.__create_entry(150, 110, 180, 20)
@@ -108,22 +109,21 @@ class Interface:
         return Checkbutton, variable
 
     def __inputs_to_packet(self):
-        coduri = []
-
+        server_options = []
         if self.__subnet_mask_option.get():
-            coduri.append(ServerOptions(1))
+            server_options.append(ServerOptions(1))
         if self.__router_option.get():
-            coduri.append(ServerOptions(3))
+            server_options.append(ServerOptions(3))
         if self.__domain_server_option.get():
-            coduri.append(ServerOptions(6))
+            server_options.append(ServerOptions(6))
         if self.__broadcast_address_option.get():
-            coduri.append(ServerOptions(28))
+            server_options.append(ServerOptions(28))
         if self.__lease_time_option.get():
-            coduri.append(ServerOptions(51))
+            server_options.append(ServerOptions(51))
         if self.__renewal_time_option.get():
-            coduri.append(ServerOptions(58))
+            server_options.append(ServerOptions(58))
 
-        new_packet = Packet(packet=None, requested_options=coduri)
+        new_packet = Packet(packet=None, requested_options=server_options)
         new_packet.host_name = self.__host_name_value.get() if self.__host_name_value.get() != 'None' else None
         new_packet.address_request = self.__address_request_value.get() if self.__address_request_value.get() != 'None' else None
         new_packet.client_id = self.__client_id_value.get() if self.__client_id_value.get() != 'None' else None
@@ -135,6 +135,13 @@ class Interface:
         self.__logging_text.config(state='normal')
         self.__logging_text.insert(END, f" {text}\n")
         self.__logging_text.config(state='disabled')
+
+    def __add_ip_in_history(self, ip: str):
+        if ip not in self.__ip_history_list:
+            self.__ip_history_list.append(ip)
+            self.__ip_history_text.config(state=NORMAL)
+            self.__ip_history_text.insert(END, f" {ip}\n")
+            self.__ip_history_text.config(state=DISABLED)
 
     def __no_response_from_server(self):
         self.__connect_button["state"] = NORMAL
@@ -150,9 +157,10 @@ class Interface:
         self.__router_value.set(packet_ack.router if packet_ack.router else "None")
         self.__domain_server_value.set(packet_ack.domain_server if packet_ack.domain_server else "None")
         self.__broadcast_address_value.set(packet_ack.broadcast_address if packet_ack.broadcast_address else "None")
-        self.__lease_time_value.set(str(packet_ack.lease_time) if packet_ack.lease_time else "None")
-        self.__renewal_time_value.set(str(packet_ack.renewal_time) if packet_ack.renewal_time else "None")
-        self.ip_curent_value.set(packet_ack.your_ip_address)
+        self.__lease_time_value.set(packet_ack.lease_time if packet_ack.lease_time else "None")
+        self.__renewal_time_value.set(packet_ack.renewal_time if packet_ack.renewal_time else
+                                      packet_ack.lease_time//2 if packet_ack.lease_time else "None")
+        self.__current_ip_value.set(packet_ack.your_ip_address)
 
     def __generate_default(self):
         packet = Packet()
@@ -203,6 +211,7 @@ class Interface:
         self.__append_to_logging(str(packet_ack))
 
         self.__set_fields_from_dhcpack(packet_ack=packet_ack)
+        self.__add_ip_in_history(packet_ack.your_ip_address)
 
         if packet_ack.get_renewal_time():
             self._timer = Timer(packet_ack.get_renewal_time(), self.__reconnect)
@@ -225,11 +234,11 @@ class Interface:
 
     def __disconnect(self):
         self._timer.cancel()
-        packet_relese = self.__last_request_packet
-        packet_relese.dhcp_message_type = MessageType.RELEASE
-        packet_relese.opcode = Opcodes.REQUEST
-        CLIENT_SOCKET.sendto(packet_relese.encode(), CLIENT_DESTINATIN_ADDR)
-        self.__append_to_logging("Resurse eliberate.")
+        packet_release = self.__last_request_packet
+        packet_release.dhcp_message_type = MessageType.RELEASE
+        packet_release.opcode = Opcodes.REQUEST
+        self.__append_to_logging("Sending DHCPRELEASE...")
+        CLIENT_SOCKET.sendto(packet_release.encode(), CLIENT_DESTINATIN_ADDR)
         self.__connect_button["state"] = NORMAL
 
     def start(self):
