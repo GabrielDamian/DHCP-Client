@@ -172,6 +172,16 @@ class Interface:
                                       packet_ack.lease_time//2 if packet_ack.lease_time else "None")
         self.__current_ip_value.set(packet_ack.your_ip_address)
 
+    def __reset_fields(self):
+        self.__renew_datetime_value.set("...")
+        self.__subnet_mask_value.set("...")
+        self.__router_value.set("...")
+        self.__domain_server_value.set("...")
+        self.__broadcast_address_value.set("...")
+        self.__lease_time_value.set("...")
+        self.__renewal_time_value.set("...")
+        self.__current_ip_value.set("...")
+
     def __generate_default(self):
         self.__host_name_value.set("None")
         self.__address_request_value.set("None")
@@ -248,6 +258,7 @@ class Interface:
         packet_release.opcode = Opcodes.REQUEST
         self.__append_to_logging("Sending DHCPRELEASE...")
         CLIENT_SOCKET.sendto(packet_release.encode(), CLIENT_DESTINATIN_ADDR)
+        self.__reset_fields()
         self.__connect_button["state"] = NORMAL
 
     def start(self):
