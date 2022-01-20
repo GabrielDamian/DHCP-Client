@@ -5,30 +5,22 @@ from typing import Callable
 
 class Timer:
     def __init__(self, interval: int, action: Callable):
-        self.interval = interval
-        self.action = action
-        self.stop_event = threading.Event()
-        self.thread = threading.Thread(target=self._mechanism)
+        self.__interval = interval
+        self.__action = action
+        self.__stop_event = threading.Event()
+        self.__thread = threading.Thread(target=self.__mechanism)
 
     def is_running(self):
-        return not self.stop_event.is_set()
+        return not self.__stop_event.is_set()
 
-    def _mechanism(self):
-        while not self.stop_event.wait(timeout=self.interval):
-            self.action()
+    def __mechanism(self):
+        while not self.__stop_event.wait(timeout=self.__interval):
+            self.__action()
             break
-        self.stop_event.set()
+        self.__stop_event.set()
 
     def start(self):
-        self.thread.start()
+        self.__thread.start()
 
     def cancel(self):
-        self.stop_event.set()
-
-
-if __name__ == "__main__":
-    t = Timer(2, lambda: print('s'))
-    t.start()
-    print(t.is_running())
-    time.sleep(3)
-    print(t.is_running())
+        self.__stop_event.set()

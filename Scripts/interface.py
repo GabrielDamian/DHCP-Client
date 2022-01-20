@@ -1,4 +1,4 @@
-from tkinter import IntVar, StringVar, BooleanVar, Variable
+from tkinter import StringVar, BooleanVar, Variable
 from tkinter import Tk, Button, Entry, Label, Text, Checkbutton, NORMAL, DISABLED, END
 from Dhcp.packet import Packet
 from Dhcp.server_options import ServerOptions
@@ -6,7 +6,7 @@ from Dhcp.message_type import MessageType
 from Dhcp.opcodes import Opcodes
 from threading import Thread
 from Scripts import CLIENT_SOCKET, CLIENT_DESTINATIN_ADDR
-from Dhcp.receivers import offer_receiver, ack_receiver
+from Dhcp.receivers import Receivers
 from Tools.timer import Timer
 from typing import Optional, Callable
 from datetime import datetime, timedelta
@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 
 class Interface:
     def __init__(self):
-        self._timer: Optional[Timer] = None
+        self.__timer: Optional[Timer] = None
         self.__last_request_packet: Optional[Packet] = None
         self.__ip_history_list = []
         self.__window = Tk()
@@ -27,10 +27,11 @@ class Interface:
                                                               command=lambda: Thread(target=self.__generate_default, args=()).start(),
                                                               x_position=100, y_position=20)
         self.__disconnect_button = self.__create_button(text="DISCONNECT",
-                                                        command=lambda: Thread(target=self.__disconnect, args=()).start(), x_position=203,
-                                                        y_position=20)
+                                                        command=lambda: Thread(target=self.__disconnect, args=()).start(),
+                                                        x_position=203, y_position=20)
 
-        self.__subnet_mask_checkbox, self.__subnet_mask_option = self.__create_checkbutton(text='Subnet Mask', x_pos=20, y_pos=280)
+        self.__subnet_mask_checkbox, self.__subnet_mask_option = self.__create_checkbutton(text='Subnet Mask',
+                                                                                           x_pos=20, y_pos=280)
         self.__router_checkbox, self.__router_option = self.__create_checkbutton(text="Router", x_pos=20, y_pos=320)
         self.__domain_server_checkbox, self.__domain_server_option = self.__create_checkbutton("Domain Server", 20, 360)
         self.__broadcast_address_checkbox, self.__broadcast_address_option = self.__create_checkbutton("Broadcast Address", 20, 400)
@@ -45,13 +46,14 @@ class Interface:
         self.__subnet_mask_label, self.__subnet_mask_value = self.__create_label(150, 280, variable_type=StringVar)
         self.__router_label, self.__router_value = self.__create_label(150, 320, variable_type=StringVar)
         self.__domain_server_label, self.__domain_server_value = self.__create_label(150, 360, variable_type=StringVar)
-        self.__broadcast_address_label, self.__broadcast_address_value = self.__create_label(150, 400, variable_type=StringVar)
+        self.__broadcast_address_label, self.__broadcast_address_value = self.__create_label(150, 400,
+                                                                                             variable_type=StringVar)
         self.__lease_time_label, self.__lease_time_value = self.__create_label(150, 440, variable_type=StringVar)
         self.__renewal_time_label, self.__renewal_time_value = self.__create_label(150, 480, variable_type=StringVar)
         self.__logging_label = self.__create_label(400, 46, text="Logging")
         self.__separator_footer_label = self.__create_label(20, 570, text="_" * 122)
-        self.__next_request_datetime_value_label, self.__next_request_datetime_value = self.__create_label(150, 650, variable_type=StringVar)
-        self.__renew_time_label = self.__create_label(20, 650, text="Renew date")
+        self.__renew_datetime_value_label, self.__renew_datetime_value = self.__create_label(150, 650, variable_type=StringVar)
+        self.__renew_datetime_label = self.__create_label(20, 650, text="Renew date")
         self.__current_ip_label = self.__create_label(400, 690, text="Current IP")
         self.__current_ip_value_label, self.__current_ip_value = self.__create_label(453, 690, variable_type=StringVar)
         self.__ip_history_label = self.__create_label(400, 600, text="Ip history")
@@ -62,7 +64,8 @@ class Interface:
         self.__client_hardware_address_input, self.__hardware_address_value = self.__create_entry(150, 190, 180, 20)
         self.__client_ip_address_input, self.__client_ip_address_value = self.__create_entry(150, 230, 180, 20)
 
-        self.__logging_text, self.__logging_text_value = self.__create_text(x_pos=400, y_pos=70, height=30, width=49, with_state=True)
+        self.__logging_text, self.__logging_text_value = self.__create_text(x_pos=400, y_pos=70,
+                                                                            height=30, width=49, with_state=True)
         self.__ip_history_text = self.__create_text(400, 630, 3, 49)
 
     def __create_button(self, text: str, command: Callable, x_position: int, y_position: int) -> Button:
@@ -70,8 +73,8 @@ class Interface:
         button.place(x=x_position, y=y_position)
         return button
 
-    def __create_entry(self, x_position: int, y_position: int, width: int,
-                       height: int, variable_type: Callable = StringVar, font: tuple = ('calibre', 10, 'normal')) -> (Entry, Variable):
+    def __create_entry(self, x_position: int, y_position: int, width: int, height: int,
+                       variable_type: Callable = StringVar, font: tuple = ('calibre', 10, 'normal')) -> (Entry, Variable):
         variable = variable_type()
         entry = Entry(self.__window, textvariable=variable, font=font)
         entry.place(x=x_position, y=y_position, width=width, height=height)
@@ -91,7 +94,8 @@ class Interface:
             label.place(x=x_pos, y=y_pos)
             return label
 
-    def __create_text(self, x_pos: int, y_pos: int, height: int, width: int, with_state: bool = False) -> (Text, Optional[str]):
+    def __create_text(self, x_pos: int, y_pos: int, height: int, width: int,
+                      with_state: bool = False) -> (Text, Optional[str]):
         if with_state:
             state = NORMAL
             text = Text(self.__window, height=height, width=width, state=state)
@@ -127,8 +131,14 @@ class Interface:
         new_packet.host_name = self.__host_name_value.get() if self.__host_name_value.get() != 'None' else None
         new_packet.address_request = self.__address_request_value.get() if self.__address_request_value.get() != 'None' else None
         new_packet.client_id = self.__client_id_value.get() if self.__client_id_value.get() != 'None' else None
-        new_packet.client_hardware_address = self.__hardware_address_value.get() if self.__hardware_address_value.get() != 'None' else None
-        new_packet.client_ip_address = self.__client_ip_address_value.get() if self.__client_ip_address_value.get() != 'None' else None
+
+        mac = self.__hardware_address_value.get()
+        if mac != "None":
+            new_packet.client_hardware_address = self.__hardware_address_value.get()
+
+        cia = self.__client_ip_address_value.get()
+        if cia != "None":
+            new_packet.client_ip_address = self.__client_ip_address_value.get()
         return new_packet
 
     def __append_to_logging(self, text: str):
@@ -150,9 +160,9 @@ class Interface:
     def __set_fields_from_dhcpack(self, packet_ack: Packet):
         next_request_datetime = datetime.now() + \
                                 timedelta(seconds=packet_ack.renewal_time if packet_ack.renewal_time else
-                                packet_ack.lease_time // 2 if packet_ack.lease_time else "None")
+                                          packet_ack.lease_time // 2 if packet_ack.lease_time else "None")
 
-        self.__next_request_datetime_value.set(f"{next_request_datetime}")
+        self.__renew_datetime_value.set(f"{next_request_datetime}")
         self.__subnet_mask_value.set(packet_ack.subnet_mask if packet_ack.subnet_mask else "None")
         self.__router_value.set(packet_ack.router if packet_ack.router else "None")
         self.__domain_server_value.set(packet_ack.domain_server if packet_ack.domain_server else "None")
@@ -163,17 +173,15 @@ class Interface:
         self.__current_ip_value.set(packet_ack.your_ip_address)
 
     def __generate_default(self):
-        packet = Packet()
-
-        self.__host_name_value.set(packet.host_name)
-        self.__address_request_value.set(packet.address_request)
-        self.__client_id_value.set(packet.client_id)
-        self.__hardware_address_value.set(packet.client_hardware_address)
-        self.__client_ip_address_value.set(packet.client_ip_address)
+        self.__host_name_value.set("None")
+        self.__address_request_value.set("None")
+        self.__client_id_value.set("None")
+        self.__hardware_address_value.set("None")
+        self.__client_ip_address_value.set("None")
         self.__subnet_mask_option.set(True)
-        self.__router_option.set(False)
-        self.__domain_server_option.set(False)
-        self.__broadcast_address_option.set(False)
+        self.__router_option.set(True)
+        self.__domain_server_option.set(True)
+        self.__broadcast_address_option.set(True)
         self.__lease_time_option.set(True)
         self.__renewal_time_option.set(True)
 
@@ -184,25 +192,24 @@ class Interface:
         packet_discover = self.__inputs_to_packet()
         packet_discover.opcode = Opcodes.REQUEST
         packet_discover.dhcp_message_type = MessageType.DISCOVER
-        packet_bytes = packet_discover.encode()
 
         self.__append_to_logging("Sending DHCPDiscover...")
-        CLIENT_SOCKET.sendto(packet_bytes, CLIENT_DESTINATIN_ADDR)
+        CLIENT_SOCKET.sendto(packet_discover.encode(), CLIENT_DESTINATIN_ADDR)
 
         self.__append_to_logging("Waiting for DHCPOffer...")
-        packet_offer = offer_receiver(CLIENT_SOCKET)
-        if packet_offer is None:
+        offer_packet = Receivers.offer_receiver(CLIENT_SOCKET)
+        if offer_packet is None:
             self.__no_response_from_server()
             return
 
         self.__append_to_logging("DHCPOffer received...")
-        self.__last_request_packet = Packet.make_request_packet(offer_packet=packet_offer)
+        self.__last_request_packet = Packet.make_request_packet(offer_packet=offer_packet)
 
         self.__append_to_logging("Sending DHCPRequest...")
         CLIENT_SOCKET.sendto(self.__last_request_packet.encode(), CLIENT_DESTINATIN_ADDR)
 
         self.__append_to_logging("Waiting for DHCPack...")
-        packet_ack = ack_receiver(CLIENT_SOCKET)
+        packet_ack = Receivers.ack_receiver(CLIENT_SOCKET)
         if packet_ack is None:
             self.__no_response_from_server()
             return
@@ -213,27 +220,29 @@ class Interface:
         self.__set_fields_from_dhcpack(packet_ack=packet_ack)
         self.__add_ip_in_history(packet_ack.your_ip_address)
 
+        self.__append_to_logging("DHCPACK received...")
         if packet_ack.get_renewal_time():
-            self._timer = Timer(packet_ack.get_renewal_time(), self.__reconnect)
-            self._timer.start()
+            self.__timer = Timer(packet_ack.get_renewal_time(), self.__reconnect)
+            self.__timer.start()
 
     def __reconnect(self):
         self.__append_to_logging("Sending DHCPRequest for renewal...")
         CLIENT_SOCKET.sendto(self.__last_request_packet.encode(), CLIENT_DESTINATIN_ADDR)
 
-        packet_ack = ack_receiver(CLIENT_SOCKET)
+        packet_ack = Receivers.ack_receiver(CLIENT_SOCKET)
         if packet_ack is None:
             self.__no_response_from_server()
             return
 
+        self.__append_to_logging("DHCPACK received...")
         self.__set_fields_from_dhcpack(packet_ack=packet_ack)
         if packet_ack.get_renewal_time():
-            self._timer.cancel()
-            self._timer = Timer(packet_ack.get_renewal_time(), self.__reconnect)
-            self._timer.start()
+            self.__timer.cancel()
+            self.__timer = Timer(packet_ack.get_renewal_time(), self.__reconnect)
+            self.__timer.start()
 
     def __disconnect(self):
-        self._timer.cancel()
+        self.__timer.cancel()
         packet_release = self.__last_request_packet
         packet_release.dhcp_message_type = MessageType.RELEASE
         packet_release.opcode = Opcodes.REQUEST

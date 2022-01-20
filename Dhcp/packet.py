@@ -194,7 +194,7 @@ class Packet:
         client_hardware_address: {self.client_hardware_address}
         server_name: {self.server_name}
         boot_filename: {self.boot_filename}
-        OPTIUNI:\n
+        OPTIONS:\n
         host_name: {self.host_name}
         address_request: {self.address_request}
         dhcp_message_type: {self.dhcp_message_type}
@@ -202,8 +202,8 @@ class Packet:
         subnet_mask: {self.subnet_mask}
         router: {self.router}
         dns: {self.domain_server}
-        broadcard_addr: {self.broadcast_address}
+        broadcast_addr: {self.broadcast_address}
         lease: {self.lease_time}
         renewal: {self.renewal_time}
-        op55: {self.option55}
+        option55: {self.option55}
         """
