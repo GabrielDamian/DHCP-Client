@@ -7,6 +7,7 @@ from Dhcp.data_to_bytes import DataToBytes
 from Dhcp.opcodes import Opcodes
 from Dhcp.server_options import ServerOptions
 from Dhcp.message_type import MessageType
+from Commons.computer import Computer
 
 
 class Packet:
@@ -25,7 +26,7 @@ class Packet:
         self.your_ip_address: str = BytesToData.bytes_to_ip(packet[16:20]) if packet else '0.0.0.0'
         self.server_ip_address: str = BytesToData.bytes_to_ip(packet[20:24]) if packet else '0.0.0.0'
         self.gateway_ip_address: str = BytesToData.bytes_to_ip(packet[24:28]) if packet else '0.0.0.0'
-        self.client_hardware_address: str = BytesToData.bytes_to_mac(packet[28:34]) if packet else '9c:b7:0d:69:71:8d'
+        self.client_hardware_address: str = BytesToData.bytes_to_mac(packet[28:34]) if packet else Computer.get_mac()
         self.server_name: str = BytesToData.bytes_to_str(packet[34:108]) if packet else ''
         self.boot_filename: str = BytesToData.bytes_to_str(packet[108:236]) if packet else ''
         self.magic_cookie: int = BytesToData.bytes_to_hex(packet[236:240]) if packet else \
