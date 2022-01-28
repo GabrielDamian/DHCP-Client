@@ -174,7 +174,8 @@ class Interface:
         if self.__renewal_time_option.get():
             server_options.append(ServerOptions(58))
 
-        new_packet = Packet(packet=None, requested_options=server_options)
+        new_packet = Packet(packet=None)
+        new_packet.server_options = server_options
         new_packet.host_name = self.__host_name_value.get() if self.__host_name_value.get() != 'None' else None
         new_packet.address_request = self.__address_request_value.get() if self.__address_request_value.get() != 'None' else None
         new_packet.client_id = self.__client_id_value.get() if self.__client_id_value.get() != 'None' else None
@@ -315,6 +316,7 @@ class Interface:
             self.__timer.start()
 
     def __disconnect(self):
+        """Disconnects from the current server"""
         self.__timer.cancel()
         packet_release = self.__last_request_packet
         packet_release.dhcp_message_type = MessageType.RELEASE
@@ -325,6 +327,7 @@ class Interface:
         self.__connect_button["state"] = NORMAL
 
     def start(self):
+        """Starts the mainloop"""
         self.__window.mainloop()
 
 

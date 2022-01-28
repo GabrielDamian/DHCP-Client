@@ -1,5 +1,4 @@
 from __future__ import annotations
-from random import randrange
 from typing import Optional, List
 from Commons.bytes_to_data import BytesToData
 from Dhcp.client_options import ClientOptions
@@ -8,19 +7,13 @@ from Dhcp.opcodes import Opcodes
 from Dhcp.server_options import ServerOptions
 from Dhcp.message_type import MessageType
 from Commons.computer import Computer
+from random import randrange
 
 
 class Packet:
-    def __init__(self, packet=None, requested_options: List[ServerOptions] = (), host_name: Optional[str] = None,
-                 address_request: Optional[str] = None, dhcp_message_type: Optional[MessageType] = None,
-                 client_id: Optional[str] = None):
+    def __init__(self, packet=None):
         """
         :param packet: A packet from which to copy contents
-        :param requested_options: Requested options for server (option 55)
-        :param host_name: Host name option
-        :param address_request: Requested address option
-        :param dhcp_message_type: DHCP message type
-        :param client_id: Client identifier
         """
 
         self.opcode: Opcodes = Opcodes(BytesToData.bytes_to_int(packet[0:1])) if packet else Opcodes.REQUEST
@@ -41,11 +34,11 @@ class Packet:
             int.from_bytes(b'\x63\x82\x53\x63', byteorder='big')
 
         # options
-        self.option55: Optional[List[ServerOptions]] = requested_options if (len(requested_options) > 0) else None
-        self.host_name: Optional[str] = host_name
-        self.address_request: Optional[str] = address_request
-        self.dhcp_message_type: Optional[MessageType] = dhcp_message_type
-        self.client_id: Optional[str] = client_id
+        self.server_options: Optional[List[ServerOptions]] = None
+        self.host_name: Optional[str] = None
+        self.address_request: Optional[str] = None
+        self.dhcp_message_type: Optional[MessageType] = None
+        self.client_id: Optional[str] = None
 
         self.subnet_mask: Optional[str] = None
         self.router: Optional[str] = None
@@ -122,10 +115,10 @@ class Packet:
         encoded_packet += DataToBytes.str_to_bytes(self.boot_filename, 128)
         encoded_packet += DataToBytes.hex_to_bytes(self.magic_cookie, 4)
 
-        if self.option55 and len(self.option55) > 0:
+        if self.server_options and len(self.server_options) > 0:
             encoded_packet += DataToBytes.int_to_bytes(55, 1)
-            encoded_packet += DataToBytes.int_to_bytes(len(self.option55))
-            for option in self.option55:
+            encoded_packet += DataToBytes.int_to_bytes(len(self.server_options))
+            for option in self.server_options:
                 encoded_packet += DataToBytes.int_to_bytes(option.value)
 
         if self.host_name:
@@ -230,5 +223,5 @@ class Packet:
         broadcast_addr: {self.broadcast_address}
         lease: {self.lease_time}
         renewal: {self.renewal_time}
-        option55: {self.option55}
+        option55: {self.server_options}
         """
