@@ -1,9 +1,9 @@
 from __future__ import annotations
 from random import randrange
 from typing import Optional, List
-from Dhcp.bytes_to_data import BytesToData
+from Commons.bytes_to_data import BytesToData
 from Dhcp.client_options import ClientOptions
-from Dhcp.data_to_bytes import DataToBytes
+from Commons.data_to_bytes import DataToBytes
 from Dhcp.opcodes import Opcodes
 from Dhcp.server_options import ServerOptions
 from Dhcp.message_type import MessageType
@@ -14,6 +14,14 @@ class Packet:
     def __init__(self, packet=None, requested_options: List[ServerOptions] = (), host_name: Optional[str] = None,
                  address_request: Optional[str] = None, dhcp_message_type: Optional[MessageType] = None,
                  client_id: Optional[str] = None):
+        """
+        :param packet: A packet from which to copy contents
+        :param requested_options: Requested options for server (option 55)
+        :param host_name: Host name option
+        :param address_request: Requested address option
+        :param dhcp_message_type: DHCP message type
+        :param client_id: Client identifier
+        """
 
         self.opcode: Opcodes = Opcodes(BytesToData.bytes_to_int(packet[0:1])) if packet else Opcodes.REQUEST
         self.hardware_type: int = BytesToData.bytes_to_int(packet[1:2]) if packet else 1
@@ -50,6 +58,10 @@ class Packet:
             self.set_options_from_bytes(packet)
 
     def set_options_from_bytes(self, packet: bytes):
+        """Set to the current packet the options from the param packet
+
+        :param packet: The packet from which to copy the options
+        """
         options_section = packet[240:]
         index = 0
         options_dict = {}
@@ -89,84 +101,93 @@ class Packet:
                     self.client_id = BytesToData.bytes_to_str(options_dict[x])
 
     def encode(self) -> bytes:
-        packet_pregatit = b''
-        packet_pregatit += DataToBytes.int_to_bytes(self.opcode)
-        packet_pregatit += DataToBytes.int_to_bytes(self.hardware_type)
-        packet_pregatit += DataToBytes.int_to_bytes(self.hardware_address_length)
-        packet_pregatit += DataToBytes.int_to_bytes(self.hops)
-        packet_pregatit += DataToBytes.hex_to_bytes(self.transaction_id)
-        packet_pregatit += DataToBytes.int_to_bytes(self.seconds_elapsed, 2)
-        packet_pregatit += DataToBytes.int_to_bytes(self.boot_flags, 2)
-        packet_pregatit += DataToBytes.ip_to_bytes(self.client_ip_address)
-        packet_pregatit += DataToBytes.ip_to_bytes(self.your_ip_address)
-        packet_pregatit += DataToBytes.ip_to_bytes(self.server_ip_address)
-        packet_pregatit += DataToBytes.ip_to_bytes(self.gateway_ip_address)
-        packet_pregatit += DataToBytes.mac_to_bytes(self.client_hardware_address, 16)
-        packet_pregatit += DataToBytes.str_to_bytes(self.server_name, 64)
-        packet_pregatit += DataToBytes.str_to_bytes(self.boot_filename, 128)
-        packet_pregatit += DataToBytes.hex_to_bytes(self.magic_cookie, 4)
+        """Encodes the current packet
+
+        :return: The packet in byte form.
+        """
+        encoded_packet = b''
+        encoded_packet += DataToBytes.int_to_bytes(self.opcode)
+        encoded_packet += DataToBytes.int_to_bytes(self.hardware_type)
+        encoded_packet += DataToBytes.int_to_bytes(self.hardware_address_length)
+        encoded_packet += DataToBytes.int_to_bytes(self.hops)
+        encoded_packet += DataToBytes.hex_to_bytes(self.transaction_id)
+        encoded_packet += DataToBytes.int_to_bytes(self.seconds_elapsed, 2)
+        encoded_packet += DataToBytes.int_to_bytes(self.boot_flags, 2)
+        encoded_packet += DataToBytes.ip_to_bytes(self.client_ip_address)
+        encoded_packet += DataToBytes.ip_to_bytes(self.your_ip_address)
+        encoded_packet += DataToBytes.ip_to_bytes(self.server_ip_address)
+        encoded_packet += DataToBytes.ip_to_bytes(self.gateway_ip_address)
+        encoded_packet += DataToBytes.mac_to_bytes(self.client_hardware_address, 16)
+        encoded_packet += DataToBytes.str_to_bytes(self.server_name, 64)
+        encoded_packet += DataToBytes.str_to_bytes(self.boot_filename, 128)
+        encoded_packet += DataToBytes.hex_to_bytes(self.magic_cookie, 4)
 
         if self.option55 and len(self.option55) > 0:
-            packet_pregatit += DataToBytes.int_to_bytes(55, 1)
-            packet_pregatit += DataToBytes.int_to_bytes(len(self.option55))
+            encoded_packet += DataToBytes.int_to_bytes(55, 1)
+            encoded_packet += DataToBytes.int_to_bytes(len(self.option55))
             for option in self.option55:
-                packet_pregatit += DataToBytes.int_to_bytes(option.value)
+                encoded_packet += DataToBytes.int_to_bytes(option.value)
 
         if self.host_name:
-            packet_pregatit += DataToBytes.int_to_bytes(ClientOptions.HOST_NAME.value) + \
-                               DataToBytes.int_to_bytes(len(self.host_name)) + \
-                               DataToBytes.str_to_bytes(self.host_name, len(self.host_name))
+            encoded_packet += DataToBytes.int_to_bytes(ClientOptions.HOST_NAME.value) + \
+                              DataToBytes.int_to_bytes(len(self.host_name)) + \
+                              DataToBytes.str_to_bytes(self.host_name, len(self.host_name))
 
         if self.address_request:
-            packet_pregatit += DataToBytes.int_to_bytes(ClientOptions.ADDRESS_REQUEST.value) + \
-                               DataToBytes.int_to_bytes(4) + \
-                               DataToBytes.ip_to_bytes(self.address_request)
+            encoded_packet += DataToBytes.int_to_bytes(ClientOptions.ADDRESS_REQUEST.value) + \
+                              DataToBytes.int_to_bytes(4) + \
+                              DataToBytes.ip_to_bytes(self.address_request)
 
         if self.dhcp_message_type:
-            packet_pregatit += DataToBytes.int_to_bytes(ClientOptions.DHCP_MESSAGE_TYPE.value) + \
-                               DataToBytes.int_to_bytes(1) + \
-                               DataToBytes.int_to_bytes(self.dhcp_message_type)
+            encoded_packet += DataToBytes.int_to_bytes(ClientOptions.DHCP_MESSAGE_TYPE.value) + \
+                              DataToBytes.int_to_bytes(1) + \
+                              DataToBytes.int_to_bytes(self.dhcp_message_type)
 
         if self.client_id:
-            packet_pregatit += DataToBytes.int_to_bytes(ClientOptions.CLIENT_ID.value) + \
-                               DataToBytes.int_to_bytes(len(self.client_id)) + \
-                               DataToBytes.str_to_bytes(self.client_id, len(self.client_id))
+            encoded_packet += DataToBytes.int_to_bytes(ClientOptions.CLIENT_ID.value) + \
+                              DataToBytes.int_to_bytes(len(self.client_id)) + \
+                              DataToBytes.str_to_bytes(self.client_id, len(self.client_id))
 
         if self.subnet_mask:
-            packet_pregatit += DataToBytes.int_to_bytes(ServerOptions.SUBNET_MASK) + \
-                               DataToBytes.int_to_bytes(4) + \
-                               DataToBytes.ip_to_bytes(self.subnet_mask)
+            encoded_packet += DataToBytes.int_to_bytes(ServerOptions.SUBNET_MASK) + \
+                              DataToBytes.int_to_bytes(4) + \
+                              DataToBytes.ip_to_bytes(self.subnet_mask)
 
         if self.router:
-            packet_pregatit += DataToBytes.int_to_bytes(ServerOptions.ROUTER) + \
-                               DataToBytes.int_to_bytes(4) + \
-                               DataToBytes.ip_to_bytes(self.router)
+            encoded_packet += DataToBytes.int_to_bytes(ServerOptions.ROUTER) + \
+                              DataToBytes.int_to_bytes(4) + \
+                              DataToBytes.ip_to_bytes(self.router)
 
         if self.domain_server:
-            packet_pregatit += DataToBytes.int_to_bytes(ServerOptions.DOMAIN_SERVER) + \
-                               DataToBytes.int_to_bytes(4) + \
-                               DataToBytes.ip_to_bytes(self.domain_server)
+            encoded_packet += DataToBytes.int_to_bytes(ServerOptions.DOMAIN_SERVER) + \
+                              DataToBytes.int_to_bytes(4) + \
+                              DataToBytes.ip_to_bytes(self.domain_server)
 
         if self.broadcast_address:
-            packet_pregatit += DataToBytes.int_to_bytes(ServerOptions.BROADCAST_ADRESS) + \
-                               DataToBytes.int_to_bytes(4) + \
-                               DataToBytes.ip_to_bytes(self.broadcast_address)
+            encoded_packet += DataToBytes.int_to_bytes(ServerOptions.BROADCAST_ADRESS) + \
+                              DataToBytes.int_to_bytes(4) + \
+                              DataToBytes.ip_to_bytes(self.broadcast_address)
 
         if self.lease_time:
-            packet_pregatit += DataToBytes.int_to_bytes(ServerOptions.LEASE_TIME) + \
-                               DataToBytes.int_to_bytes(4) + \
-                               DataToBytes.int_to_bytes(self.lease_time, 4)
+            encoded_packet += DataToBytes.int_to_bytes(ServerOptions.LEASE_TIME) + \
+                              DataToBytes.int_to_bytes(4) + \
+                              DataToBytes.int_to_bytes(self.lease_time, 4)
 
         if self.renewal_time:
-            packet_pregatit += DataToBytes.int_to_bytes(ServerOptions.RENEWAL_TIME) + \
-                               DataToBytes.int_to_bytes(4) + \
-                               DataToBytes.int_to_bytes(self.renewal_time, 4)
+            encoded_packet += DataToBytes.int_to_bytes(ServerOptions.RENEWAL_TIME) + \
+                              DataToBytes.int_to_bytes(4) + \
+                              DataToBytes.int_to_bytes(self.renewal_time, 4)
 
-        packet_pregatit += DataToBytes.int_to_bytes(255, 1)
-        return packet_pregatit
+        encoded_packet += DataToBytes.int_to_bytes(255, 1)
+        return encoded_packet
 
     @staticmethod
     def make_request_packet(offer_packet: Packet) -> Optional[Packet]:
+        """Transforms an offer packet to a request packet
+
+        :param offer_packet: The packet which will be transformed
+        :return: Request packet or None
+        """
         if offer_packet.opcode == Opcodes.REPLY and offer_packet.dhcp_message_type == MessageType.OFFER:
             offer_packet.opcode = Opcodes.REQUEST
             offer_packet.dhcp_message_type = MessageType.REQUEST
@@ -177,6 +198,9 @@ class Packet:
             return None
 
     def get_renewal_time(self) -> Optional[int]:
+        """
+        :return: renewal time in seconds
+        """
         return self.renewal_time if self.renewal_time else self.lease_time//2 if self.lease_time else None
 
     def __str__(self):

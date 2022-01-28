@@ -6,8 +6,8 @@ from Dhcp.message_type import MessageType
 from Dhcp.opcodes import Opcodes
 from threading import Thread
 from Scripts import CLIENT_SOCKET, CLIENT_DESTINATIN_ADDR
-from Dhcp.receivers import Receivers
-from Tools.timer import Timer
+from Commons.receivers import Receivers
+from Commons.timer import Timer
 from typing import Optional, Callable
 from datetime import datetime, timedelta
 
@@ -69,19 +69,46 @@ class Interface:
         self.__ip_history_text = self.__create_text(400, 630, 3, 49)
 
     def __create_button(self, text: str, command: Callable, x_position: int, y_position: int) -> Button:
+        """Creates a button
+
+        :param text: Button label text
+        :param command: Command to be executed on button pressed
+        :param x_position: x position of the button
+        :param y_position: y position of the button
+        :return: Button widget
+        """
         button = Button(self.__window, text=text, command=command)
         button.place(x=x_position, y=y_position)
         return button
 
     def __create_entry(self, x_position: int, y_position: int, width: int, height: int,
                        variable_type: Callable = StringVar, font: tuple = ('calibre', 10, 'normal')) -> (Entry, Variable):
+        """Creates an entry
+
+        :param x_position: x position of the entry widget
+        :param y_position: y position of the entry widget
+        :param width: width of the entry widget
+        :param height: height of the entry widget
+        :param variable_type: The type of variable to be paired to the entry widget
+        :param font: The font to be set. ( family, size, weight )
+        :return: A pair of (Entry Widget, Variable paired to the widget)
+        """
         variable = variable_type()
         entry = Entry(self.__window, textvariable=variable, font=font)
         entry.place(x=x_position, y=y_position, width=width, height=height)
         return entry, variable
 
     def __create_label(self, x_pos: int, y_pos: int, text: str = None,
-                       variable_type=None, font: tuple = ("Arial", 8)) -> (Entry, Optional[Variable]):
+                       variable_type=None, font: tuple = ("Arial", 8)) -> (Label, Optional[Variable]):
+        """Creates a label
+
+        :param x_pos: x position of the label widget
+        :param y_pos: y position of the label widget
+        :param text: Text to be placed inside the widget
+        :param variable_type: The type of variable to be paired to the label widget
+        :param font: The font to be set. ( family, size, weight )
+        :return: A Label if variable_type is not set, else (Label, Variable paired to label)
+        """
         label: Label
         if variable_type:
             variable: Variable = variable_type()
@@ -96,6 +123,15 @@ class Interface:
 
     def __create_text(self, x_pos: int, y_pos: int, height: int, width: int,
                       with_state: bool = False) -> (Text, Optional[str]):
+        """Creates a text field
+
+        :param x_pos: x position of the widget
+        :param y_pos: x position of the widget
+        :param height: height of the widget
+        :param width: width of the widget
+        :param with_state: true if the widget must have a state, false otherwise
+        :return: A text field if with_state is not set, else (Text, State paired to label)
+        """
         if with_state:
             state = NORMAL
             text = Text(self.__window, height=height, width=width, state=state)
@@ -107,12 +143,23 @@ class Interface:
             return text
 
     def __create_checkbutton(self, text: str, x_pos: int, y_pos: int) -> (Checkbutton, BooleanVar):
+        """Creates a checkbutton
+
+        :param text: Text that will be shown next to the checkbox
+        :param x_pos: x position of the widget
+        :param y_pos: y position of the widget
+        :return: (Checkbutton, Variable paired to the widget)
+        """
         variable = BooleanVar()
         checkbutton = Checkbutton(self.__window, text=text, variable=variable, onvalue=1, offvalue=0)
         checkbutton.place(x=x_pos, y=y_pos)
         return Checkbutton, variable
 
-    def __inputs_to_packet(self):
+    def __inputs_to_packet(self) -> Packet:
+        """Creates a packet from inputs
+
+        :return: Packet
+        """
         server_options = []
         if self.__subnet_mask_option.get():
             server_options.append(ServerOptions(1))
@@ -142,11 +189,19 @@ class Interface:
         return new_packet
 
     def __append_to_logging(self, text: str):
+        """Writes text to logging window
+
+        :param text: Text to be written
+        """
         self.__logging_text.config(state='normal')
         self.__logging_text.insert(END, f" {text}\n")
         self.__logging_text.config(state='disabled')
 
     def __add_ip_in_history(self, ip: str):
+        """Adds an ip to the history
+
+        :param ip: Added ip address
+        """
         if ip not in self.__ip_history_list:
             self.__ip_history_list.append(ip)
             self.__ip_history_text.config(state=NORMAL)
@@ -158,6 +213,10 @@ class Interface:
         self.__append_to_logging("\nNo response from the server.")
 
     def __set_fields_from_dhcpack(self, packet_ack: Packet):
+        """Fills the widgets with the ino from ack pack
+
+        :param packet_ack: packet from which to read
+        """
         next_request_datetime = datetime.now() + \
                                 timedelta(seconds=packet_ack.renewal_time if packet_ack.renewal_time else
                                           packet_ack.lease_time // 2 if packet_ack.lease_time else "None")
@@ -173,6 +232,7 @@ class Interface:
         self.__current_ip_value.set(packet_ack.your_ip_address)
 
     def __reset_fields(self):
+        """Fills widgets with '...'"""
         self.__renew_datetime_value.set("...")
         self.__subnet_mask_value.set("...")
         self.__router_value.set("...")
@@ -183,6 +243,7 @@ class Interface:
         self.__current_ip_value.set("...")
 
     def __generate_default(self):
+        """Fills the inputs with default values"""
         self.__host_name_value.set("None")
         self.__address_request_value.set("None")
         self.__client_id_value.set("None")
@@ -196,6 +257,7 @@ class Interface:
         self.__renewal_time_option.set(True)
 
     def __connect(self):
+        """Connects to a DHCP Server"""
         self.__connect_button["state"] = DISABLED
 
         self.__append_to_logging("Initializing DHCPDiscover...")
@@ -236,6 +298,7 @@ class Interface:
             self.__timer.start()
 
     def __reconnect(self):
+        """Reconnects to the same server"""
         self.__append_to_logging("Sending DHCPRequest for renewal...")
         CLIENT_SOCKET.sendto(self.__last_request_packet.encode(), CLIENT_DESTINATIN_ADDR)
 
