@@ -22,52 +22,46 @@ class ClientInterface(BaseInterface):
         self._window = Tk()
         self._window.geometry("830x720")
 
-        self.__connect_button = self._create_button(text="CONNECT",
-                                                    command=lambda: Thread(target=self.__connect, args=()).start(),
-                                                    x_position=20, y_position=20)
-        self.__generate_default_button = self._create_button(text="GEN. DEFAULT",
-                                                             command=lambda: Thread(target=self.__generate_default, args=()).start(),
-                                                             x_position=100, y_position=20)
-        self.__disconnect_button = self._create_button(text="DISCONNECT",
-                                                       command=lambda: Thread(target=self.__disconnect, args=()).start(),
-                                                       x_position=203, y_position=20)
+        self.__connect_button = self._create_button(text="CONNECT", x_position=20, y_position=20,
+                                                    command=lambda: Thread(target=self.__connect, args=()).start())
+        self._create_button(text="GEN. DEFAULT", x_position=100, y_position=20,
+                            command=lambda: Thread(target=self.__generate_default, args=()).start())
+        self._create_button(text="DISCONNECT", command=lambda: Thread(target=self.__disconnect, args=()).start(),
+                            x_position=203, y_position=20)
 
-        self.__subnet_mask_checkbox, self.__subnet_mask_option = self._create_checkbutton(text='Subnet Mask',
-                                                                                          x_pos=20, y_pos=280)
-        self.__router_checkbox, self.__router_option = self._create_checkbutton(text="Router", x_pos=20, y_pos=320)
-        self.__domain_server_checkbox, self.__domain_server_option = self._create_checkbutton("Domain Server", 20, 360)
-        self.__broadcast_address_checkbox, self.__broadcast_address_option = self._create_checkbutton("Broadcast Address", 20, 400)
-        self.__lease_time_checkbox, self.__lease_time_option = self._create_checkbutton("Lease Time", 20, 440)
-        self.__renewal_time_checkbox, self.__renewal_time_option = self._create_checkbutton("Renewal Time", 20, 480)
+        _, self.__subnet_mask_option = self._create_checkbutton(text='Subnet Mask', x_pos=20, y_pos=280)
+        _, self.__router_option = self._create_checkbutton(text="Router", x_pos=20, y_pos=320)
+        _, self.__domain_server_option = self._create_checkbutton("Domain Server", 20, 360)
+        _, self.__broadcast_address_option = self._create_checkbutton("Broadcast Address", 20, 400)
+        _, self.__lease_time_option = self._create_checkbutton("Lease Time", 20, 440)
+        _, self.__renewal_time_option = self._create_checkbutton("Renewal Time", 20, 480)
 
-        self.__host_name_label = self._create_label(x_pos=20, y_pos=70, text="HOST NAME")
-        self.__address_request_label = self._create_label(20, 110, text="ADDRESS REQUEST")
-        self.__client_id_label = self._create_label(20, 150, text="CLIENT ID")
-        self.__client_hardware_address_label = self._create_label(20, 190, text="MAC")
-        self.__client_ip_address_label = self._create_label(20, 230, text="CLIENT IP ADDRESS")
-        self.__subnet_mask_label, self.__subnet_mask_value = self._create_label(150, 280, variable_type=StringVar)
-        self.__router_label, self.__router_value = self._create_label(150, 320, variable_type=StringVar)
-        self.__domain_server_label, self.__domain_server_value = self._create_label(150, 360, variable_type=StringVar)
-        self.__broadcast_address_label, self.__broadcast_address_value = self._create_label(150, 400,
-                                                                                            variable_type=StringVar)
-        self.__lease_time_label, self.__lease_time_value = self._create_label(150, 440, variable_type=StringVar)
-        self.__renewal_time_label, self.__renewal_time_value = self._create_label(150, 480, variable_type=StringVar)
-        self.__logging_label = self._create_label(400, 46, text="Logging")
-        self.__separator_footer_label = self._create_label(20, 570, text="_" * 122)
-        self.__renew_datetime_value_label, self.__renew_datetime_value = self._create_label(150, 650, variable_type=StringVar)
-        self.__renew_datetime_label = self._create_label(20, 650, text="Renew date")
-        self.__current_ip_label = self._create_label(400, 690, text="Current IP")
-        self.__current_ip_value_label, self.__current_ip_value = self._create_label(453, 690, variable_type=StringVar)
-        self.__ip_history_label = self._create_label(400, 600, text="Ip history")
+        self._create_label(x_pos=20, y_pos=70, text="HOST NAME")
+        self._create_label(20, 110, text="ADDRESS REQUEST")
+        self._create_label(20, 150, text="CLIENT ID")
+        self._create_label(20, 190, text="MAC")
+        self._create_label(20, 230, text="CLIENT IP ADDRESS")
+        _, self.__subnet_mask_value = self._create_label(150, 280, variable_type=StringVar)
+        _, self.__router_value = self._create_label(150, 320, variable_type=StringVar)
+        _, self.__domain_server_value = self._create_label(150, 360, variable_type=StringVar)
+        _, self.__broadcast_address_value = self._create_label(150, 400, variable_type=StringVar)
+        _, self.__lease_time_value = self._create_label(150, 440, variable_type=StringVar)
+        _, self.__renewal_time_value = self._create_label(150, 480, variable_type=StringVar)
+        self._create_label(400, 46, text="Logging")
+        self._create_label(20, 570, text="_" * 122)
+        _, self.__renew_datetime_value = self._create_label(150, 650, variable_type=StringVar)
+        self._create_label(20, 650, text="Renew date")
+        self._create_label(400, 690, text="Current IP")
+        _, self.__current_ip_value = self._create_label(453, 690, variable_type=StringVar)
+        self._create_label(400, 600, text="Ip history")
 
-        self.__host_name_input, self.__host_name_value = self._create_entry(x_position=150, y_position=70, width=180, height=20)
-        self.__address_request_input, self.__address_request_value = self._create_entry(150, 110, 180, 20)
-        self.__client_id_input, self.__client_id_value = self._create_entry(150, 150, 180, 20)
-        self.__client_hardware_address_input, self.__hardware_address_value = self._create_entry(150, 190, 180, 20)
-        self.__client_ip_address_input, self.__client_ip_address_value = self._create_entry(150, 230, 180, 20)
+        _, self.__host_name_value = self._create_entry(x_position=150, y_position=70, width=180, height=20)
+        _, self.__address_request_value = self._create_entry(150, 110, 180, 20)
+        _, self.__client_id_value = self._create_entry(150, 150, 180, 20)
+        _, self.__hardware_address_value = self._create_entry(150, 190, 180, 20)
+        _, self.__client_ip_address_value = self._create_entry(150, 230, 180, 20)
 
-        self.__logging_text, self.__logging_text_value = self._create_text(x_pos=400, y_pos=70,
-                                                                           height=30, width=49, with_state=True)
+        self.__logging_text, _ = self._create_text(x_pos=400, y_pos=70, height=30, width=49, with_state=True)
         self.__ip_history_text = self._create_text(400, 630, 3, 49)
 
     def __inputs_to_packet(self) -> Packet:
