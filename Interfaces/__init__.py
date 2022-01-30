@@ -1,7 +1,9 @@
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST, SO_REUSEADDR
 
-
 def get_ip() -> str:
+    """
+    :return: The IP address of wi-fi interface
+    """
     s = socket(AF_INET, SOCK_DGRAM)
     try:
         s.connect(('10.255.255.255', 1))  # the address does not matter
@@ -11,7 +13,6 @@ def get_ip() -> str:
     finally:
         s.close()
     return ip
-
 
 WIFI_IP = get_ip()
 
@@ -29,3 +30,6 @@ SERVER_SOCKET = socket(AF_INET, SOCK_DGRAM)
 SERVER_SOCKET.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 SERVER_SOCKET.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 SERVER_SOCKET.bind(SERVER_BIND_ADDRESS)
+
+SUBNET_MASKS = [f'/{i}' for i in range(0, 33)]
+NETWORK_SIZES = {value: 2**(len(SUBNET_MASKS)-1-index) for index, value in enumerate(SUBNET_MASKS)}

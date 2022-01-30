@@ -1,5 +1,6 @@
 from tkinter import Tk, Button, StringVar, Entry, Variable, Label, Text, NORMAL, Checkbutton, BooleanVar
-from typing import Callable, Optional
+from tkinter.ttk import Combobox
+from typing import Callable, Optional, List
 
 
 class BaseInterface:
@@ -92,6 +93,20 @@ class BaseInterface:
         checkbutton = Checkbutton(self._window, text=text, variable=variable, onvalue=1, offvalue=0)
         checkbutton.place(x=x_pos, y=y_pos)
         return Checkbutton, variable
+
+    def _create_combobox(self, options: List[str], x_pos: int, y_pos: int, width: int) -> (Combobox, StringVar):
+        """Creates a combobox
+
+        :param options: List of options
+        :param x_pos: x position of the widget
+        :param y_pos: y position of the widget
+        :param width: width of the widget
+        :return: ( Combobox_Widget, Variable paired to the widget )
+        """
+        variable = StringVar()
+        widget = Combobox(master=self._window, textvariable=variable, values=options, width=width)
+        widget.place(x=x_pos, y=y_pos)
+        return widget, variable
 
     def start(self):
         """Starts the mainloop"""
