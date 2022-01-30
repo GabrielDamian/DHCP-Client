@@ -226,7 +226,8 @@ class ClientInterface(BaseInterface):
 
     def __disconnect(self):
         """Disconnects from the current server"""
-        self.__timer.cancel()
+        if self.__timer:
+            self.__timer.cancel()
         packet_release = self.__last_request_packet
         packet_release.dhcp_message_type = MessageType.RELEASE
         packet_release.opcode = Opcodes.REQUEST
