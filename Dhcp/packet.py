@@ -157,7 +157,7 @@ class Packet:
                               DataToBytes.ip_to_bytes(self.domain_server)
 
         if self.broadcast_address:
-            encoded_packet += DataToBytes.int_to_bytes(ServerOptions.BROADCAST_ADRESS) + \
+            encoded_packet += DataToBytes.int_to_bytes(ServerOptions.BROADCAST_ADDRESS) + \
                               DataToBytes.int_to_bytes(4) + \
                               DataToBytes.ip_to_bytes(self.broadcast_address)
 

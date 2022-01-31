@@ -2,8 +2,7 @@ from tkinter import Tk, StringVar, END
 from Interfaces.base_interface import BaseInterface
 from Commons.receivers import Receivers
 from threading import Thread
-from Interfaces import SERVER_SOCKET, SUBNET_MASKS, NETWORK_SIZES, SERVER_BROADCAST_ADDR
-from Dhcp.packet import Packet
+from Interfaces import SERVER_SOCKET, SUBNET_MASKS, SERVER_BROADCAST_ADDRESS
 import ipaddress
 from Dhcp.address_table import AddressTable
 from typing import Optional
@@ -71,7 +70,7 @@ class ServerInterface(BaseInterface):
         discover_packet.opcode = Opcodes.REPLY
 
         self._append_to_logging("Sending offer...")
-        SERVER_SOCKET.sendto(discover_packet.encode(), SERVER_BROADCAST_ADDR)
+        SERVER_SOCKET.sendto(discover_packet.encode(), SERVER_BROADCAST_ADDRESS)
         request_packet = Receivers.request_receiver(SERVER_SOCKET, timeout=5)
         if request_packet is None:
             self._append_to_logging("No response from client.")
@@ -83,7 +82,7 @@ class ServerInterface(BaseInterface):
         request_packet.opcode = Opcodes.REPLY
 
         self._append_to_logging("Sending ack...")
-        SERVER_SOCKET.sendto(request_packet.encode(), SERVER_BROADCAST_ADDR)
+        SERVER_SOCKET.sendto(request_packet.encode(), SERVER_BROADCAST_ADDRESS)
 
         self._address_table.give_address(unallocated_ip_address, request_packet.client_hardware_address,
                                          request_packet.client_id, datetime.now() + timedelta(seconds=int(self._lease_time_variable.get())))

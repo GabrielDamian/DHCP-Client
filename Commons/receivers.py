@@ -10,8 +10,8 @@ class Receivers:
 
     @staticmethod
     def discover_receiver(sock: socket, timeout: int = 5) -> Optional[Packet]:
-        """Waits for an DHCP discover packet, captures it and returns it
-
+        """
+        Waits for an DHCP discover packet, captures it and returns it
         :param sock: socket from which to listen
         :param timeout: amount of time to listen until gives up
         :return: DHCP discover packet received or None if times out
@@ -27,8 +27,8 @@ class Receivers:
 
     @staticmethod
     def offer_receiver(sock: socket, timeout: int = 5) -> Optional[Packet]:
-        """Waits for an DHCP offer packet, captures it and returns it
-
+        """
+        Waits for an DHCP offer packet, captures it and returns it
         :param sock: socket from which to listen
         :param timeout: amount of time to listen until gives up
         :return: DHCP offer packet received or None if times out
@@ -44,8 +44,8 @@ class Receivers:
 
     @staticmethod
     def request_receiver(sock: socket, timeout: int = 5) -> Optional[Packet]:
-        """Waits for an DHCP request packet, captures it and returns it
-
+        """
+        Waits for an DHCP request packet, captures it and returns it
         :param sock: socket from which to listen
         :param timeout: amount of time to listen until gives up
         :return: DHCP request packet received or None if times out
@@ -61,8 +61,8 @@ class Receivers:
 
     @staticmethod
     def ack_receiver(sock: socket, timeout: int = 5) -> Optional[Packet]:
-        """Waits for an DHCP ack packet, captures it and returns it
-
+        """
+        Waits for an DHCP ack packet, captures it and returns it
         :param sock: socket from which to listen
         :param timeout: amount of time to listen until gives up
         :return: DHCP ack packet received or None if times out

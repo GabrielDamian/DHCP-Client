@@ -5,7 +5,6 @@ from typing import Callable
 class Timer:
     def __init__(self, interval: int, action: Callable):
         """
-
         :param interval: The time interval in seconds after which the action will be called
         :param action: The event that happens after the time interval
         """

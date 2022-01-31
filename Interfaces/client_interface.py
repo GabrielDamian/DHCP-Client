@@ -5,7 +5,7 @@ from Dhcp.server_options import ServerOptions
 from Dhcp.message_type import MessageType
 from Dhcp.opcodes import Opcodes
 from threading import Thread
-from Interfaces import CLIENT_SOCKET, CLIENT_DESTINATIN_ADDR
+from Interfaces import CLIENT_SOCKET, CLIENT_DESTINATION_ADDRESS
 from Commons.receivers import Receivers
 from Commons.timer import Timer
 from typing import Optional
@@ -176,7 +176,7 @@ class ClientInterface(BaseInterface):
         packet_discover.dhcp_message_type = MessageType.DISCOVER
 
         self.__append_to_logging("Sending DHCPDiscover...")
-        CLIENT_SOCKET.sendto(packet_discover.encode(), CLIENT_DESTINATIN_ADDR)
+        CLIENT_SOCKET.sendto(packet_discover.encode(), CLIENT_DESTINATION_ADDRESS)
 
         self.__append_to_logging("Waiting for DHCPOffer...")
         offer_packet = Receivers.offer_receiver(CLIENT_SOCKET)
@@ -188,7 +188,7 @@ class ClientInterface(BaseInterface):
         self.__last_request_packet = Packet.make_request_packet(offer_packet=offer_packet)
 
         self.__append_to_logging("Sending DHCPRequest...")
-        CLIENT_SOCKET.sendto(self.__last_request_packet.encode(), CLIENT_DESTINATIN_ADDR)
+        CLIENT_SOCKET.sendto(self.__last_request_packet.encode(), CLIENT_DESTINATION_ADDRESS)
 
         self.__append_to_logging("Waiting for DHCPack...")
         packet_ack = Receivers.ack_receiver(CLIENT_SOCKET)
@@ -210,7 +210,7 @@ class ClientInterface(BaseInterface):
     def __reconnect(self):
         """Reconnects to the same server"""
         self.__append_to_logging("Sending DHCPRequest for renewal...")
-        CLIENT_SOCKET.sendto(self.__last_request_packet.encode(), CLIENT_DESTINATIN_ADDR)
+        CLIENT_SOCKET.sendto(self.__last_request_packet.encode(), CLIENT_DESTINATION_ADDRESS)
 
         packet_ack = Receivers.ack_receiver(CLIENT_SOCKET)
         if packet_ack is None:
@@ -232,7 +232,7 @@ class ClientInterface(BaseInterface):
         packet_release.dhcp_message_type = MessageType.RELEASE
         packet_release.opcode = Opcodes.REQUEST
         self.__append_to_logging("Sending DHCPRELEASE...")
-        CLIENT_SOCKET.sendto(packet_release.encode(), CLIENT_DESTINATIN_ADDR)
+        CLIENT_SOCKET.sendto(packet_release.encode(), CLIENT_DESTINATION_ADDRESS)
         self.__reset_fields()
         self.__connect_button["state"] = NORMAL
 

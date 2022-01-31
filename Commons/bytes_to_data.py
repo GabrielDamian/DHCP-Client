@@ -1,8 +1,8 @@
 class BytesToData:
     @staticmethod
     def bytes_to_ip(data: bytes) -> str:
-        """Transforms an ip address from bytes to decimal dotted form
-
+        """
+        Transforms an ip address from bytes to decimal dotted form
         :param data: Ip address in bytes
         :return: Ip address in decimal dotted form
         """
@@ -12,8 +12,8 @@ class BytesToData:
 
     @staticmethod
     def bytes_to_hex(data: bytes) -> int:
-        """Transforms bytes into hexadecimal numbers
-
+        """
+        Transforms bytes into hexadecimal numbers
         :param data: bytes to be parsed
         :return: hexadecimal value
         """
@@ -21,8 +21,8 @@ class BytesToData:
 
     @staticmethod
     def bytes_to_str(data: bytes) -> str:
-        """Transforms bytes into string
-
+        """
+        Transforms bytes into string
         :param data: bytes to be transformed
         :return: input bytes parsed to string
         """
@@ -31,8 +31,8 @@ class BytesToData:
 
     @staticmethod
     def bytes_to_int(data: bytes) -> int:
-        """Transforms byte into integer
-
+        """
+        Transforms byte into integer
         :param data: bytes to be transformed
         :return: input bytes parsed to int
         """
@@ -40,8 +40,8 @@ class BytesToData:
 
     @staticmethod
     def bytes_to_mac(data: bytes) -> str:
-        """Tranforms a MAC address from bytes to hexadecimal with colons format
-
+        """
+        Tranforms a MAC address from bytes to hexadecimal with colons format
         :param data: bytes to be transformed
         :return: input bytes parsed to hexadecimal with colons format
         """

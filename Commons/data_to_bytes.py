@@ -4,8 +4,8 @@ import socket
 class DataToBytes:
     @staticmethod
     def ip_to_bytes(data: str) -> bytes:
-        """Transforms an ip dotted form to bytes form
-
+        """
+        Transforms an ip dotted form to bytes form
         :param data: The ip address in dotted form
         :return: Ip address in byte form
         """
@@ -13,8 +13,8 @@ class DataToBytes:
 
     @staticmethod
     def hex_to_bytes(data, length: int = 4) -> bytes:
-        """Transforms hexadecimal values to bytes
-
+        """
+        Transforms hexadecimal values to bytes
         :param data: hexadecimal value to be transformed
         :param length: length of the returned bytes
         :return: Hexadecimal values in byte form
@@ -23,8 +23,8 @@ class DataToBytes:
 
     @staticmethod
     def int_to_bytes(data: int, length: int = 1) -> bytes:
-        """Transforms integer values to bytes
-
+        """
+        Transforms integer values to bytes
         :param data: integer value to be transformed
         :param length: length of the returned bytes
         :return: integer values parsed to bytes
@@ -33,8 +33,8 @@ class DataToBytes:
 
     @staticmethod
     def mac_to_bytes(address: str, length: int = 6) -> bytes:
-        """Transforms a MAC address with colons form to bytes
-
+        """
+        Transforms a MAC address with colons form to bytes
         :param address: MAC address with colons form
         :param length: length of the returned bytes
         :return: MAC address in byte form
@@ -46,8 +46,8 @@ class DataToBytes:
 
     @staticmethod
     def str_to_bytes(data: str, length: int) -> bytes:
-        """Transforms string values to bytes
-
+        """
+        Transforms string values to bytes
         :param data: string to be parsed
         :param length: length of the returned bytes
         :return: input string in byte form
