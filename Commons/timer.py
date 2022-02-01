@@ -19,8 +19,8 @@ class Timer:
     def __mechanism(self):
         while not self.__stop_event.wait(timeout=self.__interval):
             self.__action()
-            break
-        self.__stop_event.set()
+        #     break
+        # self.__stop_event.set()
 
     def start(self):
         self.__thread.start()

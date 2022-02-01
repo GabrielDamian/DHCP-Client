@@ -1,21 +1,19 @@
+from time import sleep
 from tkinter import Tk, StringVar, END
 from Interfaces.base_interface import BaseInterface
-from Commons.receivers import Receivers
 from threading import Thread
-from Interfaces import SERVER_SOCKET, SUBNET_MASKS, SERVER_BROADCAST_ADDRESS
-import ipaddress
-from Dhcp.address_table import AddressTable
+from Interfaces import SUBNET_MASKS
 from typing import Optional
-from Dhcp.message_type import MessageType
-from Dhcp.opcodes import Opcodes
-from datetime import datetime, timedelta
+from Backend.server import Server
+from Commons.timer import Timer
 
 
 class ServerInterface(BaseInterface):
     def __init__(self):
         super().__init__()
 
-        self._address_table: Optional[AddressTable] = None
+        self._server: Optional[Server] = None
+        self._address_pool_updater: Optional[Timer] = None
 
         self._window = Tk()
         self._window.geometry("830x720")
@@ -48,49 +46,22 @@ class ServerInterface(BaseInterface):
         self._address_pool_view_text, _ = self._create_text(x_pos=20, y_pos=475, height=14, width=98, with_state=True)
         self._logging_text, _ = self._create_text(x_pos=400, y_pos=100, height=20, width=50, with_state=True)
 
-        self._subnet_mask_variable.trace_add(mode="write", callback=lambda x, y, z: Thread(target=self._set_new_address_table).start())
-        self._network_ip_address_variable.trace_add(mode="write", callback=lambda x, y, z: Thread(target=self._set_new_address_table).start())
-
     def _start_server(self):
         self._append_to_logging("Listening for discover packets...")
-        discover_packet = Receivers.discover_receiver(SERVER_SOCKET, 5)
-        if discover_packet is None:
-            self._append_to_logging("No response from client.")
-            return
-
-        self._append_to_logging("Discover received...")
-        unallocated_ip_address = self._address_table.get_unallocated_address()
-        discover_packet.your_ip_address = str(unallocated_ip_address)
-        discover_packet.subnet_mask = self._address_table.get_subnet_mask()
-        discover_packet.router = self._router_variable.get()
-        discover_packet.domain_server = self._dns_variable.get()
-        discover_packet.lease_time = int(self._lease_time_variable.get())
-        discover_packet.renewal_time = int(self._renewal_time_variable.get())
-        discover_packet.dhcp_message_type = MessageType.OFFER
-        discover_packet.opcode = Opcodes.REPLY
-
-        self._append_to_logging("Sending offer...")
-        SERVER_SOCKET.sendto(discover_packet.encode(), SERVER_BROADCAST_ADDRESS)
-        request_packet = Receivers.request_receiver(SERVER_SOCKET, timeout=5)
-        if request_packet is None:
-            self._append_to_logging("No response from client.")
-            return
-
-        self._append_to_logging("Request received...")
-        request_packet.your_ip_address = str(unallocated_ip_address)
-        request_packet.dhcp_message_type = MessageType.ACK
-        request_packet.opcode = Opcodes.REPLY
-
-        self._append_to_logging("Sending ack...")
-        SERVER_SOCKET.sendto(request_packet.encode(), SERVER_BROADCAST_ADDRESS)
-
-        self._address_table.give_address(unallocated_ip_address, request_packet.client_hardware_address,
-                                         request_packet.client_id, datetime.now() + timedelta(seconds=int(self._lease_time_variable.get())))
-
-        self._update_address_pool_view()
+        self._server = Server(network_ip_address=self._network_ip_address_variable.get(),
+                              mask=self._subnet_mask_variable.get(),
+                              router=self._router_variable.get(),
+                              dns=self._dns_variable.get(),
+                              lease_time=int(self._lease_time_variable.get()),
+                              renewal_time=int(self._renewal_time_variable.get()))
+        self._server.start()
+        self._address_pool_updater = Timer(interval=2, action=self._update_address_pool_view)
+        self._address_pool_updater.start()
 
     def _stop_server(self):
         self._append_to_logging("Stopping...")
+        self._server.stop()
+        self._address_pool_updater.cancel()
 
     def _generate_default(self):
         self._server_name_variable.set("DHCP Server")
@@ -109,20 +80,17 @@ class ServerInterface(BaseInterface):
         self._logging_text.insert(END, f" {text}\n")
         self._logging_text.config(state='disabled')
 
-    def _set_new_address_table(self):
-        try:
-            ip = f'{self._network_ip_address_variable.get()}{self._subnet_mask_variable.get()}'
-            network_ip = ipaddress.ip_network(address=ip, strict=False)
-            self._address_table = AddressTable(network_ip)
-        except Exception as ex:
-            return
-
-    def _update_address_pool_view(self):
+    def _update_address_pool_view(self, interval: int = 5):
         """Updates the address pool view with the current inputs"""
-        self._address_pool_view_text.config(state='normal')
-        self._address_pool_view_text.delete('1.0', END)
-        self._address_pool_view_text.insert(END, f" {str(self._address_table)}\n")
-        self._address_pool_view_text.config(state='disabled')
+        while True:
+            self._address_pool_view_text.config(state='normal')
+            self._address_pool_view_text.delete('1.0', END)
+            self._address_pool_view_text.insert(END, f" {str(self._server)}\n")
+            self._address_pool_view_text.config(state='disabled')
+            sleep(interval)
+
+    def __del__(self):
+        self._address_pool_updater.cancel()
 
 
 if __name__ == "__main__":

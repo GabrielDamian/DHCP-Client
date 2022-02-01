@@ -75,3 +75,20 @@ class Receivers:
             if packet.opcode == Opcodes.REPLY and packet.dhcp_message_type == MessageType.ACK:
                 return packet
             packet = None
+
+    @staticmethod
+    def release_receiver(sock: socket, timeout: int = 5) -> Optional[Packet]:
+        """
+        Waits for an DHCP ack packet, captures it and returns it
+        :param sock: socket from which to listen
+        :param timeout: amount of time to listen until gives up
+        :return: DHCP ack packet received or None if times out
+        """
+        while True:
+            message_received, _, _ = select([sock], [], [], timeout)
+            packet = Packet(sock.recv(1024)) if message_received else None
+            if packet is None:
+                return None
+            if packet.opcode == Opcodes.REQUEST and packet.dhcp_message_type == MessageType.RELEASE:
+                return packet
+            packet = None

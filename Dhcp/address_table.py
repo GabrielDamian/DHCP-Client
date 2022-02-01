@@ -41,15 +41,16 @@ class AddressTable:
             self._table[address][3] = True
             return 1
 
-    def revoke_address(self, address: IPv4Address):
+    def release_address(self, address: IPv4Address):
         """
         Frees an is address
         :param address: The address to free
         """
-        self._table[address][0] = None
-        self._table[address][1] = None
-        self._table[address][2] = None
-        self._table[address][3] = False
+        if address in self._table.keys() and self.is_used(address):
+            self._table[address][0] = None
+            self._table[address][1] = None
+            self._table[address][2] = None
+            self._table[address][3] = False
 
     def get_mac(self, address: IPv4Address) -> Optional[str]:
         """
@@ -86,6 +87,12 @@ class AddressTable:
             return bool(self._table[address][3])
         else:
             return None
+
+    def clear(self):
+        """Releases all addresses"""
+        for address in self._table.keys():
+            if self.is_used(address):
+                self.release_address(address)
 
     def get_subnet_mask(self) -> str:
         return str(self._network_address.netmask)
