@@ -46,6 +46,7 @@ class Packet:
         self.broadcast_address: Optional[str] = None
         self.lease_time: Optional[int] = None
         self.renewal_time: Optional[int] = None
+        self.server_identifier = None
 
         if packet:
             self.set_options_from_bytes(packet)
@@ -90,6 +91,8 @@ class Packet:
                     self.address_request = BytesToData.bytes_to_ip(options_dict[x])
                 elif x == 53:
                     self.dhcp_message_type = BytesToData.bytes_to_int(options_dict[x])
+                elif x == 54:
+                    self.server_identifier = BytesToData.bytes_to_ip(options_dict[x])
                 elif x == 61:
                     self.client_id = BytesToData.bytes_to_str(options_dict[x])
 
@@ -140,6 +143,11 @@ class Packet:
             encoded_packet += DataToBytes.int_to_bytes(ClientOptions.CLIENT_ID.value) + \
                               DataToBytes.int_to_bytes(len(self.client_id)) + \
                               DataToBytes.str_to_bytes(self.client_id, len(self.client_id))
+
+        if self.server_identifier:
+            encoded_packet += DataToBytes.int_to_bytes(ServerOptions.SERVER_IDENTIFIER) + \
+                              DataToBytes.int_to_bytes(4) + \
+                              DataToBytes.ip_to_bytes(self.server_identifier)
 
         if self.subnet_mask:
             encoded_packet += DataToBytes.int_to_bytes(ServerOptions.SUBNET_MASK) + \

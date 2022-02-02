@@ -1,11 +1,12 @@
 from time import sleep
 from tkinter import Tk, StringVar, END
 from Interfaces.base_interface import BaseInterface
-from threading import Thread
 from Interfaces import SUBNET_MASKS
 from typing import Optional
 from Backend.server import Server
 from Commons.timer import Timer
+from threading import Thread
+from queue import Queue
 
 
 class ServerInterface(BaseInterface):
@@ -14,6 +15,9 @@ class ServerInterface(BaseInterface):
 
         self._server: Optional[Server] = None
         self._address_pool_updater: Optional[Timer] = None
+        self._logging_queue = Queue()
+        self._address_pool_updater = Timer(interval=1//20, action=self._update_address_pool_view)
+        self._logging_updater = Timer(interval=1//20, action=self._handle_logging)
 
         self._window = Tk()
         self._window.geometry("830x720")
@@ -53,10 +57,11 @@ class ServerInterface(BaseInterface):
                               router=self._router_variable.get(),
                               dns=self._dns_variable.get(),
                               lease_time=int(self._lease_time_variable.get()),
-                              renewal_time=int(self._renewal_time_variable.get()))
+                              renewal_time=int(self._renewal_time_variable.get()),
+                              logging_queue=self._logging_queue)
         self._server.start()
-        self._address_pool_updater = Timer(interval=2, action=self._update_address_pool_view)
         self._address_pool_updater.start()
+        self._logging_updater.start()
 
     def _stop_server(self):
         self._append_to_logging("Stopping...")
@@ -89,7 +94,13 @@ class ServerInterface(BaseInterface):
             self._address_pool_view_text.config(state='disabled')
             sleep(interval)
 
+    def _handle_logging(self):
+        message = self._logging_queue.get()
+        if message:
+            self._append_to_logging(message)
+
     def __del__(self):
+        self._address_pool_updater.cancel()
         self._address_pool_updater.cancel()
 
 

@@ -7,4 +7,5 @@ class ServerOptions(IntEnum):
     DOMAIN_SERVER = 6
     BROADCAST_ADDRESS = 28
     LEASE_TIME = 51
+    SERVER_IDENTIFIER = 54
     RENEWAL_TIME = 58
