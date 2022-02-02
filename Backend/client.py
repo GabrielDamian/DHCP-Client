@@ -30,7 +30,6 @@ class Client:
         self._socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
         self._socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         self._socket.bind(self._source_address)
-        ## Thread can only be statred once
 
     def connect(self):
         self._log("Sending discover...")
@@ -59,6 +58,7 @@ class Client:
         self._timer.start()
 
     def reconnect(self):
+        self._timer.cancel()
         self._log("Sending request...")
         self._send_message(self._last_request_packet)
 
@@ -70,19 +70,16 @@ class Client:
         self._log("Ack received...")
         self._log(packet_ack.encode())
         if packet_ack.get_renewal_time():
-            self._timer.cancel()
             self._timer = Timer(packet_ack.get_renewal_time(), self.reconnect)
             self._timer.start()
 
     def disconnect(self):
-        self._log("Disconnecting...")
         if self._timer:
             self._timer.cancel()
         packet_release = self._last_request_packet
         packet_release.dhcp_message_type = MessageType.RELEASE
         packet_release.opcode = Opcodes.REQUEST
         self._send_message(packet_release)
-        self._log('reset')
         self._log("Disconnected.")
 
     def _send_discover(self):
@@ -101,7 +98,6 @@ class Client:
         self._log("No response from server.")
 
     def _log(self, message: Union[str, bytes]):
-        self._logging_queue.put(message)
         self._logging_queue.put(message)
 
     def _send_message(self, message: Packet):

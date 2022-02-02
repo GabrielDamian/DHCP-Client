@@ -17,7 +17,7 @@ class ClientInterface(BaseInterface):
         self.__timer: Optional[Timer] = None
         self.__last_request_packet: Optional[Packet] = None
         self._logging_queue = Queue()
-        self._logging_timer = Timer(interval=1//10, action=self._handle_logging)
+        self._logging_timer = Timer(interval=1/5, action=self._handle_logging)
         self.__ip_history_list = []
         self._client: Optional[Client] = None
         self._window = Tk()
@@ -173,14 +173,17 @@ class ClientInterface(BaseInterface):
                               address_request=packet.address_request, client_id=packet.client_id,
                               mac=packet.client_hardware_address, client_ip_address=packet.client_ip_address,
                               logging_queue=self._logging_queue)
+
+        self._logging_timer = Timer(interval=1/5, action=self._handle_logging)
         self._logging_timer.start()
         self._client.connect()
 
     def __disconnect(self):
         """Disconnects from the current server"""
         self._client.disconnect()
-        self._logging_timer.cancel()
+        self.__reset_fields()
         self.__connect_button["state"] = NORMAL
+        self._logging_timer.cancel()
 
     def _handle_logging(self):
         message = self._logging_queue.get()

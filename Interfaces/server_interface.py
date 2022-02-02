@@ -15,8 +15,8 @@ class ServerInterface(BaseInterface):
 
         self._server: Optional[Server] = None
         self._logging_queue = Queue()
-        self._address_pool_updater = Timer(interval=1, action=self._update_address_pool_view)
-        self._logging_updater = Timer(interval=1//20, action=self._handle_logging)
+        self._address_pool_updater = Timer(interval=1/20, action=self._update_address_pool_view)
+        self._logging_updater = Timer(interval=1/20, action=self._handle_logging)
 
         self._window = Tk()
         self._window.geometry("830x720")

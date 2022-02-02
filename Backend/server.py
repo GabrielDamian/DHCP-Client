@@ -10,6 +10,7 @@ import ipaddress
 from datetime import datetime, timedelta
 from threading import Thread
 from queue import Queue
+from Commons.timer import Timer
 
 
 class Server:
@@ -32,7 +33,7 @@ class Server:
         self._socket.bind(self._bind_address)
 
         self._last_selected_ip_address: Optional[ipaddress.IPv4Address] = None
-        self._stop_request = False
+        self._packet_listener_timer: Optional[Timer] = Timer(action=self._listen_packets, interval=1/20)
         self._logging_queue = logging_queue
 
     def start(self):
@@ -41,11 +42,11 @@ class Server:
         network_ip = ipaddress.ip_network(address=ip, strict=False)
         self._address_table = AddressTable(network_ip)
 
-        Thread(target=self._listen_packets).start()
+        self._packet_listener_timer.start()
 
     def stop(self):
         """Stop the server and clear the address table"""
-        self._stop_request = True
+        self._packet_listener_timer.cancel()
         self._address_table.clear()
 
     def _send_message(self, message: Packet):
@@ -57,19 +58,18 @@ class Server:
 
     def _listen_packets(self):
         """Listen for DHCP messages and handle them"""
-        while not self._stop_request:
-            message_received, _, _ = select([self._socket], [], [], 60)
-            packet = Packet(self._socket.recv(1024)) if message_received else None
-            if packet is None:
-                return
-            elif packet.opcode == Opcodes.REQUEST and packet.dhcp_message_type == MessageType.DISCOVER:
-                Thread(target=self._handle_discover, args=(packet,)).start()
-            elif packet.opcode == Opcodes.REQUEST and packet.dhcp_message_type == MessageType.REQUEST:
-                Thread(target=self._handle_request, args=(packet,)).start()
-            elif packet.opcode == Opcodes.REQUEST and packet.dhcp_message_type == MessageType.RELEASE:
-                Thread(target=self._handle_release, args=(packet,)).start()
-            else:
-                raise Exception("Not recognised message")
+        message_received, _, _ = select([self._socket], [], [], 60)
+        packet = Packet(self._socket.recv(1024)) if message_received else None
+        if packet is None:
+            return
+        elif packet.opcode == Opcodes.REQUEST and packet.dhcp_message_type == MessageType.DISCOVER:
+            Thread(target=self._handle_discover, args=(packet,)).start()
+        elif packet.opcode == Opcodes.REQUEST and packet.dhcp_message_type == MessageType.REQUEST:
+            Thread(target=self._handle_request, args=(packet,)).start()
+        elif packet.opcode == Opcodes.REQUEST and packet.dhcp_message_type == MessageType.RELEASE:
+            Thread(target=self._handle_release, args=(packet,)).start()
+        else:
+            raise Exception("Not recognised message")
 
     def _handle_discover(self, discover_message: Packet):
         """
