@@ -14,9 +14,8 @@ class ServerInterface(BaseInterface):
         super().__init__()
 
         self._server: Optional[Server] = None
-        self._address_pool_updater: Optional[Timer] = None
         self._logging_queue = Queue()
-        self._address_pool_updater = Timer(interval=1//20, action=self._update_address_pool_view)
+        self._address_pool_updater = Timer(interval=1, action=self._update_address_pool_view)
         self._logging_updater = Timer(interval=1//20, action=self._handle_logging)
 
         self._window = Tk()
@@ -85,14 +84,12 @@ class ServerInterface(BaseInterface):
         self._logging_text.insert(END, f" {text}\n")
         self._logging_text.config(state='disabled')
 
-    def _update_address_pool_view(self, interval: int = 5):
+    def _update_address_pool_view(self):
         """Updates the address pool view with the current inputs"""
-        while True:
-            self._address_pool_view_text.config(state='normal')
-            self._address_pool_view_text.delete('1.0', END)
-            self._address_pool_view_text.insert(END, f" {str(self._server)}\n")
-            self._address_pool_view_text.config(state='disabled')
-            sleep(interval)
+        self._address_pool_view_text.config(state='normal')
+        self._address_pool_view_text.delete('1.0', END)
+        self._address_pool_view_text.insert(END, f" {str(self._server)}\n")
+        self._address_pool_view_text.config(state='disabled')
 
     def _handle_logging(self):
         message = self._logging_queue.get()

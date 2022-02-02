@@ -11,7 +11,7 @@ from random import randrange
 
 
 class Packet:
-    def __init__(self, packet=None):
+    def __init__(self, packet: bytes = None):
         """
         :param packet: A packet from which to copy contents
         """

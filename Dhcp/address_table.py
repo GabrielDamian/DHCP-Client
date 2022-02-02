@@ -32,14 +32,10 @@ class AddressTable:
         :param lease: lease associated with the ip address
         :return: None if the address is already used 1 otherwise
         """
-        if self.is_used(address):
-            return None
-        else:
-            self._table[address][0] = mac
-            self._table[address][1] = client_id
-            self._table[address][2] = lease
-            self._table[address][3] = True
-            return 1
+        self._table[address][0] = mac
+        self._table[address][1] = client_id
+        self._table[address][2] = lease
+        self._table[address][3] = True
 
     def release_address(self, address: IPv4Address):
         """

@@ -2,15 +2,13 @@ from tkinter import StringVar
 from tkinter import Tk, NORMAL, DISABLED, END
 from Dhcp.packet import Packet
 from Dhcp.server_options import ServerOptions
-from Dhcp.message_type import MessageType
-from Dhcp.opcodes import Opcodes
 from threading import Thread
-from Interfaces import CLIENT_SOCKET, CLIENT_DESTINATION_ADDRESS
-from Commons.receivers import Receivers
 from Commons.timer import Timer
 from typing import Optional
 from datetime import datetime, timedelta
 from Interfaces.base_interface import BaseInterface
+from queue import Queue
+from Backend.client import Client
 
 
 class ClientInterface(BaseInterface):
@@ -18,7 +16,10 @@ class ClientInterface(BaseInterface):
         super().__init__()
         self.__timer: Optional[Timer] = None
         self.__last_request_packet: Optional[Packet] = None
+        self._logging_queue = Queue()
+        self._logging_timer = Timer(interval=1//10, action=self._handle_logging)
         self.__ip_history_list = []
+        self._client: Optional[Client] = None
         self._window = Tk()
         self._window.geometry("830x720")
 
@@ -118,15 +119,12 @@ class ClientInterface(BaseInterface):
             self.__ip_history_text.insert(END, f" {ip}\n")
             self.__ip_history_text.config(state=DISABLED)
 
-    def __no_response_from_server(self):
-        self.__connect_button["state"] = NORMAL
-        self.__append_to_logging("\nNo response from the server.")
-
     def __set_fields_from_dhcpack(self, packet_ack: Packet):
         """Fills the widgets with the ino from ack pack
 
         :param packet_ack: packet from which to read
         """
+        self.__add_ip_in_history(packet_ack.your_ip_address)
         next_request_datetime = datetime.now() + \
                                 timedelta(seconds=packet_ack.renewal_time if packet_ack.renewal_time else
                                           packet_ack.lease_time // 2 if packet_ack.lease_time else "None")
@@ -170,71 +168,28 @@ class ClientInterface(BaseInterface):
         """Connects to a DHCP Server"""
         self.__connect_button["state"] = DISABLED
 
-        self.__append_to_logging("Initializing DHCPDiscover...")
-        packet_discover = self.__inputs_to_packet()
-        packet_discover.opcode = Opcodes.REQUEST
-        packet_discover.dhcp_message_type = MessageType.DISCOVER
-
-        self.__append_to_logging("Sending DHCPDiscover...")
-        CLIENT_SOCKET.sendto(packet_discover.encode(), CLIENT_DESTINATION_ADDRESS)
-
-        self.__append_to_logging("Waiting for DHCPOffer...")
-        offer_packet = Receivers.offer_receiver(CLIENT_SOCKET)
-        if offer_packet is None:
-            self.__no_response_from_server()
-            return
-
-        self.__append_to_logging("DHCPOffer received...")
-        self.__last_request_packet = Packet.make_request_packet(offer_packet=offer_packet)
-
-        self.__append_to_logging("Sending DHCPRequest...")
-        CLIENT_SOCKET.sendto(self.__last_request_packet.encode(), CLIENT_DESTINATION_ADDRESS)
-
-        self.__append_to_logging("Waiting for DHCPack...")
-        packet_ack = Receivers.ack_receiver(CLIENT_SOCKET)
-        if packet_ack is None:
-            self.__no_response_from_server()
-            return
-
-        self.__append_to_logging("DHCPAck received...")
-        self.__append_to_logging(str(packet_ack))
-
-        self.__set_fields_from_dhcpack(packet_ack=packet_ack)
-        self.__add_ip_in_history(packet_ack.your_ip_address)
-
-        self.__append_to_logging("DHCPACK received...")
-        if packet_ack.get_renewal_time():
-            self.__timer = Timer(packet_ack.get_renewal_time(), self.__reconnect)
-            self.__timer.start()
-
-    def __reconnect(self):
-        """Reconnects to the same server"""
-        self.__append_to_logging("Sending DHCPRequest for renewal...")
-        CLIENT_SOCKET.sendto(self.__last_request_packet.encode(), CLIENT_DESTINATION_ADDRESS)
-
-        packet_ack = Receivers.ack_receiver(CLIENT_SOCKET)
-        if packet_ack is None:
-            self.__no_response_from_server()
-            return
-
-        self.__append_to_logging("DHCPACK received...")
-        self.__set_fields_from_dhcpack(packet_ack=packet_ack)
-        if packet_ack.get_renewal_time():
-            self.__timer.cancel()
-            self.__timer = Timer(packet_ack.get_renewal_time(), self.__reconnect)
-            self.__timer.start()
+        packet = self.__inputs_to_packet()
+        self._client = Client(server_options=packet.server_options, host_name=packet.host_name,
+                              address_request=packet.address_request, client_id=packet.client_id,
+                              mac=packet.client_hardware_address, client_ip_address=packet.client_ip_address,
+                              logging_queue=self._logging_queue)
+        self._logging_timer.start()
+        self._client.connect()
 
     def __disconnect(self):
         """Disconnects from the current server"""
-        if self.__timer:
-            self.__timer.cancel()
-        packet_release = self.__last_request_packet
-        packet_release.dhcp_message_type = MessageType.RELEASE
-        packet_release.opcode = Opcodes.REQUEST
-        self.__append_to_logging("Sending DHCPRELEASE...")
-        CLIENT_SOCKET.sendto(packet_release.encode(), CLIENT_DESTINATION_ADDRESS)
-        self.__reset_fields()
+        self._client.disconnect()
+        self._logging_timer.cancel()
         self.__connect_button["state"] = NORMAL
+
+    def _handle_logging(self):
+        message = self._logging_queue.get()
+        if type(message) is str and message == "reset":
+            self.__reset_fields()
+        elif type(message) is str:
+            self.__append_to_logging(message)
+        elif type(message) is bytes:
+            self.__set_fields_from_dhcpack(Packet(message))
 
 
 if __name__ == "__main__":

@@ -97,10 +97,13 @@ class Server:
         :param request_packet: The request packet
         """
         self._log("Request received...")
-        if request_packet.address_request != str(self._last_selected_ip_address):
-            self._send_nak()
-            return
-        request_packet.your_ip_address = str(self._last_selected_ip_address)
+        if self._address_table.is_used(ipaddress.IPv4Address(request_packet.address_request)) and \
+                request_packet.client_id == self._address_table.get_client_identifier(ipaddress.IPv4Address(request_packet.address_request)):
+            request_packet.your_ip_address = request_packet.address_request
+        else:
+            self._last_selected_ip_address = self._address_table.get_unallocated_address()
+            request_packet.your_ip_address = str(self._last_selected_ip_address)
+
         request_packet.dhcp_message_type = MessageType.ACK
         request_packet.opcode = Opcodes.REPLY
 
