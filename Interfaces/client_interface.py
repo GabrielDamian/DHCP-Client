@@ -1,4 +1,3 @@
-import time
 from tkinter import StringVar
 from tkinter import Tk, NORMAL, DISABLED, END
 from Dhcp.packet import Packet
