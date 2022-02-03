@@ -130,6 +130,7 @@ class Server:
         self._logging_queue.put(message)
 
     def _send_nak(self):
+        """Sends a nak packet"""
         packet = Packet()
         packet.dhcp_message_type = MessageType.NACK
         packet.server_identifier = self._server_ip_address

@@ -32,6 +32,7 @@ class Client:
         self._socket.bind(self._source_address)
 
     def connect(self):
+        """Client starts the connection"""
         self._log("Sending discover...")
         self._send_discover()
 
@@ -74,13 +75,13 @@ class Client:
             self._timer.start()
 
     def disconnect(self):
+        self._log("Disconnecting...")
         if self._timer:
             self._timer.cancel()
         packet_release = self._last_request_packet
         packet_release.dhcp_message_type = MessageType.RELEASE
         packet_release.opcode = Opcodes.REQUEST
         self._send_message(packet_release)
-        self._log("Disconnected.")
 
     def _send_discover(self):
         discover_packet = Packet()
